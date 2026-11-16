@@ -80,6 +80,9 @@
   .soc{margin-top:4px} .soc summary{color:var(--blu2);font-size:12.5px;font-weight:600}
   .soc textarea{display:block;width:100%;min-width:300px;margin:4px 0;font:13px/1.4 "Segoe UI",Roboto,Arial,sans-serif;border:1px solid var(--riga);border-radius:6px;padding:6px 8px;resize:vertical}
   .soc button{font:inherit;font-size:12.5px;font-weight:600;background:var(--blu2);color:#fff;border:0;border-radius:6px;padding:6px 12px;cursor:pointer}
+  .soc button.post{background:#b85c00;margin-left:6px} .soc button.post.bozza{background:#6b7280} .soc button.post.prog{background:#1d4ed8} .soc button.post.fatto{background:#16794a}
+  .tipo.t-post{background:#dcf3e6;color:#16794a}
+  .soc .risp{font-size:12.5px;margin:6px 0 2px;color:var(--grigio)} .soc .risp b{color:#16794a}
   .soc .img{display:flex;gap:10px;align-items:flex-end;margin-top:8px}
   .soc img{width:96px;height:120px;object-fit:cover;border-radius:6px;background:var(--chiaro)}
   .soc .img a{font-size:12.5px;font-weight:600;color:var(--blu2)}
@@ -212,13 +215,60 @@
     });
   }
   // accesso unico: Studio Social riceve SHA-256(chiave + "studio-social") nel frammento dell'indirizzo (non va al server)
+  var STUDIO = 'https://studio-social.agl-correale.workers.dev', CH = null, POST = {}, ultimoStato = 0;
   function chiaveStudio(bits) {
     var t = new TextEncoder().encode('studio-social'), u = new Uint8Array(bits.length + t.length);
     u.set(bits, 0); u.set(t, bits.length);
     sub.digest('SHA-256', u).then(function (h) {
-      var v = aB64(new Uint8Array(h)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      var a = $('vaiStudio'); a.href = a.href.split('#')[0] + '#area=' + v;
+      CH = aB64(new Uint8Array(h)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+      $('vaiStudio').href = STUDIO + '/#area=' + CH;
+      statoPost();
     });
+  }
+  // stato dei post creati da qui ("Pubblica post"), letto da Studio Social
+  function statoPost() {
+    if (!CH || Date.now() - ultimoStato < 5000) return;
+    ultimoStato = Date.now();
+    fetch(STUDIO + '/api/area/post', { headers: { 'x-chiave-area': CH }, cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (p) {
+      if (!p || JSON.stringify(p) === JSON.stringify(POST)) return;
+      POST = p; if (!$('archivio').hidden) disegna();
+    }).catch(function () {});
+  }
+  window.addEventListener('focus', statoPost);
+  // risparmio % dell'offerta minima rispetto al valore di mercato stimato in perizia (campo stima)
+  function risparmio(l) { return l.stima && l.offertaMinima ? Math.round((1 - l.offertaMinima / l.stima) * 100) : 0; }
+  function rigaRisparmio(l) {
+    if (!l.stima || !l.offertaMinima) return '';
+    var p = risparmio(l);
+    return '<div class="risp">' + (p > 0 ? '<b>Risparmio ' + p + '%</b>' : '<b>Nessun risparmio</b>') + ' · offerta minima ' + e(l.offertaMinima) + ' su valore di mercato in perizia ' + e(l.stima) + '</div>';
+  }
+  function bottonePost(r, l) {
+    var p = POST[r.cartella + '|' + l.numero], dt = p && p.data ? ' il ' + d(p.data) : '';
+    var et = !p ? ['', '📣 Pubblica post'] : p.stato === 'pubblicato' ? ['fatto', '✓ Post pubblicato' + dt] : p.stato === 'approvato' ? ['prog', '🕒 Post programmato' + dt] : ['bozza', '📝 Post in bozza: apri'];
+    return '<button type="button" class="post ' + et[0] + '" data-c="' + esc(r.cartella) + '" data-n="' + esc(l.numero) + '">' + et[1] + '</button>';
+  }
+  // apre Studio Social e gli passa foto e testi: la scheda "Immobile all'asta" si apre già compilata
+  function pubblicaPost(b) {
+    if (!CH) return;
+    var r = window.ARCHIVIO.filter(function (x) { return x.cartella === b.getAttribute('data-c'); })[0];
+    var l = r && (r.lotti || []).filter(function (x) { return String(x.numero) === b.getAttribute('data-n'); })[0];
+    if (!l) return;
+    var w = window.open(STUDIO + '/#area=' + CH + '&compila', '_blank');
+    if (!w) { alert('Il browser ha bloccato la nuova finestra: consenti i popup per questa pagina e riprova.'); return; }
+    var f = l.socialFoto ? r.cartella + '/foto/' + l.socialFoto : null;
+    var foto = f && FILE[f] ? scarica(FILE[f]).then(function (x) { return new Blob([x], { type: 'image/jpeg' }); }).catch(function () { return null; }) : Promise.resolve(null);
+    var pronto = foto.then(function (blob) {
+      return { tipo: 'compila-immobile', chiave: r.cartella + '|' + l.numero, foto: blob, valori: {
+        comune: nomeComune(l), prezzo: l.offertaMinima ? String(Math.round(l.offertaMinima)) : '',
+        risparmio: risparmio(l) > 0 ? String(risparmio(l)) : '',
+        descrizione: String(l.social || '').trim() } };
+    });
+    function ricevi(ev) {
+      if (ev.origin !== STUDIO || ev.source !== w || !ev.data || ev.data.tipo !== 'studio-pronto') return;
+      window.removeEventListener('message', ricevi);
+      pronto.then(function (dati) { w.postMessage(dati, STUDIO); });
+    }
+    window.addEventListener('message', ricevi);
   }
   function chiediPassword(msg) {
     $('attesa').hidden = true; $('archivio').hidden = true; $('esci').hidden = true; $('menu').hidden = true;
@@ -282,7 +332,8 @@
       var t = ev.target;
       var pdf = t.closest && t.closest('a[data-pdf]');
       if (pdf) { ev.preventDefault(); ev.stopPropagation(); apriPdf(pdf); return; }
-      if (t.matches && t.matches('.soc button')) { copia(t); return; }
+      if (t.matches && t.matches('.soc button.post')) { pubblicaPost(t); return; }
+      if (t.matches && t.matches('.soc button.copia')) { copia(t); return; }
       if (t.closest && t.closest('summary .chip a, .capo a[target]')) ev.stopPropagation();
     });
     $('lista').addEventListener('toggle', function (ev) {
@@ -391,7 +442,9 @@
       var pdf = r.cartella + '/Resoconto perizia.pdf';
       var idc = r.cartella + '|' + comune;
       var immobili = L.map(function (l) {
+        var ps = POST[r.cartella + '|' + l.numero];
         return '<span class="imm"><b>' + esc(l.indirizzo || l.nome) + '</b>' + (l.tipo ? ' <span class="tipo t-' + l.tipo + '">' + (TIPI[l.tipo] || l.tipo) + '</span>' : '') +
+          (ps && ps.stato === 'pubblicato' ? ' <span class="tipo t-post">Post pubblicato</span>' : '') +
           '<small>' + (LT.length > 1 ? 'Lotto ' + l.numero + ' · ' : '') + esc(l.nome) + ' · offerta minima ' + e(l.offertaMinima) + '</small></span>';
       }).join('');
       h.push('<details class="asta ' + col + '" data-c="' + esc(idc) + '"' + (aperte[idc] ? ' open' : '') + '><summary class="capo">' +
@@ -417,7 +470,7 @@
           var nome = (r.cartella + ' lotto ' + l.numero).replace(/[^\w\- ]+/g, '').replace(/\s+/g, '_') + '.jpg';
           if (FILE[f]) img = '<div class="img" data-f="' + esc(f) + '"><img alt=""><div><a class="scarica" download="' + nome + '">Caricamento…</a><br><a class="apri" target="_blank" hidden>Apri</a></div></div>';
         }
-        var soc = l.social ? '<details class="soc"><summary>Descrizione Social ▾</summary><textarea readonly rows="3">' + esc(l.social.trim()) + '</textarea><button type="button">Copia testo</button>' + img + '</details>' : '';
+        var soc = l.social ? '<details class="soc"><summary>Descrizione Social ▾</summary>' + rigaRisparmio(l) + '<textarea readonly rows="3">' + esc(l.social.trim()) + '</textarea><button type="button" class="copia">Copia testo</button>' + bottonePost(r, l) + img + '</details>' : '';
         h.push('<tr><td data-e="Lotto"><span class="lotto">' + l.numero + '</span></td><td><b>' + l.nome + '</b>' + (l.comune ? '<br><small style="color:var(--grigio)">' + l.comune + '</small>' : '') + soc + '</td><td data-e="Quota">' + (l.quota || '—') + '</td>' +
           '<td class="n" data-e="Stima">' + e(l.stima) + (l.stimaNota ? '<br><small>(' + l.stimaNota + ')</small>' : '') + '</td><td class="n" data-e="Base d\'asta">' + e(l.base) + '</td><td class="n" data-e="Offerta minima"><b>' + e(l.offertaMinima) + '</b>' + sconto + '</td>' +
           '<td data-e="Valutazione">' + val + '</td><td class="' + st[1] + '" data-e="Stato">' + st[0] + (l.statoNota ? '<br><small>' + l.statoNota + '</small>' : '') + '</td><td data-e="Annuncio">' + cod + '</td></tr>');
