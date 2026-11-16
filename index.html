@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
-<title>Archivio aste – Correale Consulting</title>
+<title>Area riservata – Correale Consulting</title>
 <style>
   :root{--blu:#12355b;--blu2:#1f5a94;--chiaro:#eef3f8;--riga:#d5dde6;--testo:#1c2430;--grigio:#5b6675;--att:#b4530a;--attbg:#fff5e8;--ok:#1d6b3a;--okbg:#e8f4ec;--rosso:#a32020;--rossobg:#fdeaea}
   *{box-sizing:border-box}
@@ -14,6 +14,9 @@
   header .dentro{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   header h1{margin:0;font-size:20px;flex:1}
   header p{margin:2px 0 0;opacity:.8;font-size:12.5px}
+  #menu .dentro{margin-top:10px;gap:6px}
+  #menu a{color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:7px 14px;border-radius:8px;background:rgba(255,255,255,.12)}
+  #menu a.attiva{background:#fff;color:var(--blu)}
   header button{font:inherit;font-size:12.5px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:6px;padding:5px 10px;cursor:pointer}
   main{max-width:1280px;margin:0 auto;padding:14px 16px 40px}
   /* accesso */
@@ -42,6 +45,11 @@
   details.asta[open] .capo{border-bottom:1px solid var(--riga)}
   .capo h2{margin:0;font-size:17px;color:var(--blu);flex:1;min-width:220px}
   .capo h2 small{display:block;font-weight:400;color:var(--grigio);font-size:12px}
+  .capo h2 .imm{display:block;margin-bottom:4px} .capo h2 .imm b{font-size:17px}
+  .capo h2 small.proc{margin-top:2px;font-size:11.5px}
+  .tipo{display:inline-block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;border-radius:4px;padding:1px 6px;vertical-align:2px;background:var(--chiaro);color:var(--blu)}
+  .t-residenziale{background:#e3f0e8;color:#1d6b3a} .t-commerciale{background:#e6eefa;color:#1f5a94} .t-industriale{background:#f1e9f7;color:#6a3d8f} .t-terreni{background:#f6efdc;color:#7a5a12}
+  h3.comune{margin:18px 0 8px;color:var(--blu);font-size:18px;border-bottom:2px solid var(--blu2);padding-bottom:4px} h3.comune small{font-weight:400;color:var(--grigio);font-size:13px}
   .scad{text-align:center;border-radius:8px;padding:6px 12px;min-width:130px}
   .scad small{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
   .scad b{font-size:17px;display:block;line-height:1.2}
@@ -99,9 +107,14 @@
 </head>
 <body>
 <header><div class="dentro">
-  <div style="flex:1"><h1>Archivio aste</h1><p id="oggi">Correale Consulting · area riservata</p></div>
+  <div style="flex:1"><h1>Area riservata</h1><p id="oggi">Correale Consulting</p></div>
   <button id="esci" type="button" hidden>Esci</button>
-</div></header>
+</div>
+<!-- Sezioni dell'area riservata: per aggiungerne una, aggiungere un link qui -->
+<nav id="menu" hidden><div class="dentro">
+  <a class="attiva" href="#">Archivio aste</a>
+  <a href="https://social-correale.netlify.app" target="_blank" rel="noopener">Studio Social ↗</a>
+</div></nav></header>
 <main>
   <form id="accesso" hidden>
     <h2>Area riservata</h2>
@@ -114,7 +127,15 @@
   <div id="archivio" hidden>
     <div class="tessere" id="tessere"></div>
     <div class="filtri">
-      <input id="cerca" type="search" placeholder="Cerca procedura, comune, immobile, codice…">
+      <input id="cerca" type="search" placeholder="Cerca via, comune, immobile, codice…">
+      <select id="fComune"><option value="">Tutti i comuni</option></select>
+      <select id="fTipo">
+        <option value="">Tutti i tipi</option>
+        <option value="residenziale">Residenziale</option>
+        <option value="commerciale">Commerciale</option>
+        <option value="industriale">Industriale</option>
+        <option value="terreni">Terreni</option>
+      </select>
       <select id="fStato">
         <option value="">Tutti gli stati</option>
         <option value="in_asta">Solo lotti in asta</option>
@@ -190,7 +211,7 @@
     });
   }
   function chiediPassword(msg) {
-    $('attesa').hidden = true; $('archivio').hidden = true; $('esci').hidden = true;
+    $('attesa').hidden = true; $('archivio').hidden = true; $('esci').hidden = true; $('menu').hidden = true;
     $('accesso').hidden = false; $('errore').textContent = msg || ''; $('entra').disabled = false;
     $('pw').value = ''; $('pw').focus();
   }
@@ -239,11 +260,14 @@
   }
 
   function mostra(generato) {
-    $('attesa').hidden = true; $('accesso').hidden = true; $('archivio').hidden = false; $('esci').hidden = false;
+    $('attesa').hidden = true; $('accesso').hidden = true; $('archivio').hidden = false; $('esci').hidden = false; $('menu').hidden = false;
     var A = window.ARCHIVIO;
     $('oggi').textContent = 'Situazione al ' + new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) +
       ' · ' + (A.length === 1 ? '1 resoconto' : A.length + ' resoconti') + (generato ? ' · aggiornato il ' + AGL.data(generato.slice(0, 10)) : '');
-    ['cerca', 'fStato', 'ordine'].forEach(function (id) { $(id).addEventListener('input', disegna); });
+    var comuni = {};
+    A.forEach(function (r) { (r.lotti || []).forEach(function (l) { comuni[nomeComune(l)] = 1; }); });
+    Object.keys(comuni).sort().forEach(function (c) { var o = document.createElement('option'); o.value = c; o.textContent = c; $('fComune').appendChild(o); });
+    ['cerca', 'fComune', 'fTipo', 'fStato', 'ordine'].forEach(function (id) { $(id).addEventListener('input', disegna); });
     $('lista').addEventListener('click', function (ev) {
       var t = ev.target;
       var pdf = t.closest && t.closest('a[data-pdf]');
@@ -290,6 +314,8 @@
     if (term && Date.now() > term) return ['Offerte chiuse, gara il ' + d(a.data), 'st-att'];
     return st;
   }
+  function nomeComune(l) { return String(l.comune || 'Comune non indicato').replace(/\s*\([^)]*\)\s*$/, ''); }
+  var TIPI = { residenziale: 'Residenziale', commerciale: 'Commerciale', industriale: 'Industriale', terreni: 'Terreni' };
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
 
   function disegna() {
@@ -315,37 +341,53 @@
       '<div class="tessera"><small>Entro 15 giorni</small><b>' + entro15 + '</b><span>aste con offerte da presentare</span></div>' +
       '<div class="tessera' + (daAggiornare ? ' urgente' : '') + '"><small>Esito da aggiornare</small><b>' + daAggiornare + '</b><span>lotti con asta già passata</span></div>';
 
-    A = A.filter(function (r) {
-      var lotti = (r.lotti || []).filter(function (l) {
-        return !fs || (fs === 'altro' ? (l.stato !== 'in_asta' && l.stato !== 'venduto') : l.stato === fs);
+    var fc = $('fComune').value, ft = $('fTipo').value;
+    // una voce per ogni coppia comune + procedura, con i soli lotti che passano i filtri
+    var voci = [];
+    A.forEach(function (r) {
+      var gruppi = {};
+      (r.lotti || []).forEach(function (l) {
+        if (fs && !(fs === 'altro' ? (l.stato !== 'in_asta' && l.stato !== 'venduto') : l.stato === fs)) return;
+        var c = nomeComune(l);
+        if (fc && c !== fc) return;
+        if (ft && l.tipo !== ft) return;
+        if (q) {
+          var testo = [r.procedura.titolo, r.procedura.intestazione, r.cartella, l.nome, l.comune, l.indirizzo, l.descrizione, (l.codici || []).map(function (x) { return x.codice; }).join(' ')].join(' ').toLowerCase();
+          if (testo.indexOf(q) < 0) return;
+        }
+        (gruppi[c] = gruppi[c] || []).push(l);
       });
-      if (!lotti.length) return false;
-      if (!q) return true;
-      var testo = [r.procedura.titolo, r.procedura.tribunale, r.procedura.intestazione, r.cartella].concat((r.lotti || []).map(function (l) {
-        return [l.nome, l.comune, l.descrizione, (l.codici || []).map(function (c) { return c.codice; }).join(' ')].join(' ');
-      })).join(' ').toLowerCase();
-      return testo.indexOf(q) > -1;
+      Object.keys(gruppi).forEach(function (c) { voci.push({ r: r, comune: c, lotti: gruppi[c] }); });
     });
-    A.sort(function (a, b) {
-      if (ord === 'nome') return (a.procedura.titolo + a.procedura.tribunale).localeCompare(b.procedura.titolo + b.procedura.tribunale);
-      if (ord === 'valore') { var v = function (r) { return (r.lotti || []).reduce(function (t, l) { return t + (Number(l.stima) || 0); }, 0); }; return v(b) - v(a); }
-      var sa = scadenza(a), sb = scadenza(b), ora = Date.now();
-      var ka = !sa ? 9e15 : (sa.m < ora ? 8e15 - sa.m : +sa.m), kb = !sb ? 9e15 : (sb.m < ora ? 8e15 - sb.m : +sb.m);
-      return ka - kb;
+    function chiave(v) { var s = scadenza(v.r), ora = Date.now(); return !s ? 9e15 : (s.m < ora ? 8e15 - s.m : +s.m); }
+    voci.sort(function (a, b) {
+      if (ord === 'nome') return (a.lotti[0].indirizzo || a.lotti[0].nome).localeCompare(b.lotti[0].indirizzo || b.lotti[0].nome);
+      if (ord === 'valore') { var v = function (x) { return x.lotti.reduce(function (t, l) { return t + (Number(l.stima) || 0); }, 0); }; return v(b) - v(a); }
+      return chiave(a) - chiave(b);
     });
+    var perComune = {};
+    voci.forEach(function (v) { (perComune[v.comune] = perComune[v.comune] || []).push(v); });
+    var ordineComuni = Object.keys(perComune).sort(function (a, b) { return a.localeCompare(b); });
 
     var h = [];
-    A.forEach(function (r) {
-      var L = r.lotti || [], s = scadenza(r), col = colore(r), a = s ? s.a : (r.asta || {});
-      var nIn = L.filter(function (l) { return l.stato === 'in_asta'; }).length;
-      var nV = L.filter(function (l) { return l.stato === 'venduto'; }).length;
-      var nAltro = L.length - nIn - nV;
+    ordineComuni.forEach(function (comune) {
+      var gruppo = perComune[comune], nl = gruppo.reduce(function (t, v) { return t + v.lotti.length; }, 0);
+      h.push('<h3 class="comune">' + esc(comune) + ' <small>' + (nl === 1 ? '1 immobile' : nl + ' immobili') + '</small></h3>');
+      gruppo.forEach(function (voce) {
+      var r = voce.r, L = voce.lotti, LT = r.lotti || [], s = scadenza(r), col = colore(r), a = s ? s.a : (r.asta || {});
+      var nIn = LT.filter(function (l) { return l.stato === 'in_asta'; }).length;
+      var nV = LT.filter(function (l) { return l.stato === 'venduto'; }).length;
+      var nAltro = LT.length - nIn - nV;
       var pdf = r.cartella + '/Resoconto perizia.pdf';
-      h.push('<details class="asta ' + col + '" data-c="' + esc(r.cartella) + '"' + (aperte[r.cartella] ? ' open' : '') + '><summary class="capo">' +
+      var idc = r.cartella + '|' + comune;
+      var immobili = L.map(function (l) {
+        return '<span class="imm"><b>' + esc(l.indirizzo || l.nome) + '</b>' + (l.tipo ? ' <span class="tipo t-' + l.tipo + '">' + (TIPI[l.tipo] || l.tipo) + '</span>' : '') +
+          '<small>' + (LT.length > 1 ? 'Lotto ' + l.numero + ' · ' : '') + esc(l.nome) + ' · offerta minima ' + e(l.offertaMinima) + '</small></span>';
+      }).join('');
+      h.push('<details class="asta ' + col + '" data-c="' + esc(idc) + '"' + (aperte[idc] ? ' open' : '') + '><summary class="capo">' +
         '<div class="scad ' + col + '"><small>Scadenza offerte</small><b>' + (s ? d(a.termineOfferte) : '—') + '</b><span>' + (s ? (a.oraTermine ? 'ore ' + a.oraTermine + ' · ' : '') + tra(s.m) : 'nessun lotto in asta') + '</span></div>' +
         '<div class="esp"><b>' + (a.esperimento ? a.esperimento + '°' : '—') + '</b><small>esperimento</small></div>' +
-        '<h2>' + r.procedura.titolo + ' – ' + r.procedura.tribunale + '<small>' + (r.procedura.intestazione || '') + '</small></h2>' +
-        '<div class="info">' +
+        '<h2>' + immobili + '<small class="proc">' + r.procedura.titolo + ' – ' + r.procedura.tribunale + '</small></h2>' +        '<div class="info">' +
           '<div class="chip"><small>Data asta</small><b>' + d(a.data) + (a.ora ? ' ore ' + a.ora : '') + '</b></div>' +
           '<div class="chip"><small>Lotti nella stessa asta</small><b>' + nIn + ' su ' + L.length + '</b>' + (nV ? ' · ' + nV + ' venduti' : '') + (nAltro ? ' · ' + nAltro + ' non in asta' : '') + '</div>' +
           '<div class="chip"><small>Dove</small><b>' + (a.portale || '—') + '</b></div>' +
@@ -373,8 +415,9 @@
       h.push('</table></div>');
       if (r.copertina && r.copertina.avviso) h.push('<div class="avviso">' + r.copertina.avviso + '</div>');
       h.push('</details>');
+      });
     });
-    $('lista').innerHTML = h.join('') || '<div class="vuoto">Nessun resoconto corrisponde alla ricerca.</div>';
+    $('lista').innerHTML = h.join('') || '<div class="vuoto">Nessun immobile corrisponde ai filtri.</div>';
   }
 })();
 </script>
