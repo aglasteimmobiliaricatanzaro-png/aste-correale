@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Archivio aste – Correale Consulting</title>
+<style>
+  :root{--blu:#12355b;--blu2:#1f5a94;--chiaro:#eef3f8;--riga:#d5dde6;--testo:#1c2430;--grigio:#5b6675;--att:#b4530a;--attbg:#fff5e8;--ok:#1d6b3a;--okbg:#e8f4ec;--rosso:#a32020;--rossobg:#fdeaea}
+  *{box-sizing:border-box}
+  html,body{background:#e6ebf1}
+  body{margin:0;color:var(--testo);font:14px/1.45 "Segoe UI",Roboto,Arial,sans-serif}
+  header{background:var(--blu);color:#fff;padding:14px 16px}
+  header .dentro{max-width:1280px;margin:0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header h1{margin:0;font-size:20px;flex:1}
+  header p{margin:2px 0 0;opacity:.8;font-size:12.5px}
+  header button{font:inherit;font-size:12.5px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:6px;padding:5px 10px;cursor:pointer}
+  main{max-width:1280px;margin:0 auto;padding:14px 16px 40px}
+  /* accesso */
+  #accesso{max-width:380px;margin:12vh auto 0;background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 10px rgba(0,0,0,.1)}
+  #accesso h2{margin:0 0 4px;color:var(--blu);font-size:19px}
+  #accesso p{margin:0 0 14px;color:var(--grigio);font-size:13px}
+  #accesso input[type=password]{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--riga);border-radius:8px}
+  #accesso label{display:flex;gap:8px;align-items:center;margin:12px 0;font-size:13px;color:var(--grigio)}
+  #accesso button{width:100%;font:inherit;font-weight:600;font-size:15px;background:var(--blu);color:#fff;border:0;border-radius:8px;padding:11px;cursor:pointer}
+  #accesso button:disabled{opacity:.6}
+  #errore{color:var(--rosso);font-size:13px;min-height:18px;margin-top:8px}
+  /* archivio */
+  .tessere{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+  .tessera{background:#fff;border-radius:8px;padding:10px 14px;border-top:4px solid var(--blu2)}
+  .tessera small{display:block;color:var(--grigio);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  .tessera b{font-size:22px;color:var(--blu);line-height:1.2;display:block}
+  .tessera span{font-size:12.5px;color:var(--grigio)}
+  .tessera.urgente{border-top-color:var(--rosso)} .tessera.urgente b{color:var(--rosso)}
+  .filtri{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .filtri input,.filtri select{font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--riga);border-radius:6px;background:#fff}
+  .filtri input{flex:1;min-width:220px}
+  details.asta{background:#fff;border-radius:10px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden;border-left:6px solid var(--blu2)}
+  details.asta.rosso{border-left-color:var(--rosso)} details.asta.arancio{border-left-color:var(--att)} details.asta.verde{border-left-color:var(--ok)} details.asta.grigio{border-left-color:#9aa5b1}
+  details summary{list-style:none;cursor:pointer} details summary::-webkit-details-marker{display:none}
+  .capo{display:flex;gap:14px;padding:12px 16px;align-items:center;flex-wrap:wrap}
+  details.asta[open] .capo{border-bottom:1px solid var(--riga)}
+  .capo h2{margin:0;font-size:17px;color:var(--blu);flex:1;min-width:220px}
+  .capo h2 small{display:block;font-weight:400;color:var(--grigio);font-size:12px}
+  .scad{text-align:center;border-radius:8px;padding:6px 12px;min-width:130px}
+  .scad small{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
+  .scad b{font-size:17px;display:block;line-height:1.2}
+  .scad span{font-size:12px}
+  .scad.rosso{background:var(--rossobg);color:var(--rosso)} .scad.arancio{background:var(--attbg);color:var(--att)} .scad.verde{background:var(--okbg);color:var(--ok)} .scad.grigio{background:var(--chiaro);color:var(--grigio)}
+  .esp{background:var(--att);color:#fff;border-radius:8px;padding:4px 12px;text-align:center;min-width:92px}
+  .esp b{display:block;font-size:30px;line-height:1.1}
+  .esp small{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
+  .info{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{background:var(--chiaro);border-radius:6px;padding:5px 9px;font-size:12.5px}
+  .chip small{display:block;color:var(--grigio);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+  .chip b{color:var(--blu)}
+  .bottoni{display:flex;gap:6px;align-items:center}
+  .bottoni a{background:var(--blu);color:#fff;text-decoration:none;border-radius:6px;padding:7px 12px;font-size:13px;font-weight:600}
+  .freccia{color:var(--blu2);font-size:12.5px;font-weight:600;white-space:nowrap}
+  .freccia::after{content:" ▾"} details.asta[open] .freccia::after{content:" ▴"}
+  details.asta[open] .freccia .ch{display:none} details.asta:not([open]) .freccia .ap{display:none}
+  .scorri{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{padding:7px 10px;text-align:left;vertical-align:top;border-bottom:1px solid var(--riga)}
+  th{background:var(--chiaro);color:var(--blu);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em}
+  tr:last-child td{border-bottom:0}
+  td.n,th.n{text-align:right;white-space:nowrap}
+  .lotto{display:inline-block;background:var(--blu);color:#fff;border-radius:5px;padding:1px 8px;font-weight:700}
+  .scelta{display:inline-block;border-radius:5px;padding:1px 8px;font-weight:700;background:var(--chiaro);color:var(--blu)}
+  .scelta.prima{background:var(--ok);color:#fff}
+  td details p{margin:4px 0 0;font-size:12.5px;max-width:420px}
+  .soc{margin-top:4px} .soc summary{color:var(--blu2);font-size:12.5px;font-weight:600}
+  .soc textarea{display:block;width:100%;min-width:300px;margin:4px 0;font:13px/1.4 "Segoe UI",Roboto,Arial,sans-serif;border:1px solid var(--riga);border-radius:6px;padding:6px 8px;resize:vertical}
+  .soc button{font:inherit;font-size:12.5px;font-weight:600;background:var(--blu2);color:#fff;border:0;border-radius:6px;padding:6px 12px;cursor:pointer}
+  .soc .img{display:flex;gap:10px;align-items:flex-end;margin-top:8px}
+  .soc img{width:96px;height:120px;object-fit:cover;border-radius:6px;background:var(--chiaro)}
+  .soc .img a{font-size:12.5px;font-weight:600;color:var(--blu2)}
+  .pro{color:var(--ok);font-weight:700} .contro{color:var(--att);font-weight:700}
+  .st-ok{color:var(--ok);font-weight:700} .st-att{color:var(--att);font-weight:700} .st-no{color:var(--grigio);font-weight:700}
+  .sconto{color:var(--ok);font-weight:700}
+  .avviso{background:var(--attbg);border-left:4px solid var(--att);padding:6px 16px;font-size:12.5px}
+  .vuoto{background:#fff;border-radius:10px;padding:30px;text-align:center;color:var(--grigio)}
+  .attesa{text-align:center;color:var(--grigio);padding:40px}
+  @media (max-width:900px){.tessere{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:760px){
+    .capo{gap:10px;padding:12px}
+    .capo h2{min-width:100%;order:-1}
+    .scad,.esp{min-width:0;flex:1}
+    .info .chip{flex:1 1 40%}
+    .bottoni{width:100%;justify-content:space-between}
+    table,tbody,tr,td{display:block;width:100%}
+    tr:first-child{display:none}
+    tr{border-bottom:6px solid var(--chiaro);padding:6px 0}
+    td{border:0;padding:4px 12px;text-align:left!important;white-space:normal!important}
+    td[data-e]::before{content:attr(data-e);display:block;color:var(--grigio);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
+    .soc textarea{min-width:0}
+  }
+</style>
+</head>
+<body>
+<header><div class="dentro">
+  <div style="flex:1"><h1>Archivio aste</h1><p id="oggi">Correale Consulting · area riservata</p></div>
+  <button id="esci" type="button" hidden>Esci</button>
+</div></header>
+<main>
+  <form id="accesso" hidden>
+    <h2>Area riservata</h2>
+    <p>Inserisci la password per vedere l'archivio.</p>
+    <input id="pw" type="password" autocomplete="current-password" placeholder="Password" required>
+    <label><input id="ricorda" type="checkbox" checked> Ricorda su questo dispositivo</label>
+    <button id="entra" type="submit">Entra</button>
+    <div id="errore"></div>
+  </form>
+  <div id="archivio" hidden>
+    <div class="tessere" id="tessere"></div>
+    <div class="filtri">
+      <input id="cerca" type="search" placeholder="Cerca procedura, comune, immobile, codice…">
+      <select id="fStato">
+        <option value="">Tutti gli stati</option>
+        <option value="in_asta">Solo lotti in asta</option>
+        <option value="venduto">Solo venduti</option>
+        <option value="altro">Non ancora all'asta / altro</option>
+      </select>
+      <select id="ordine">
+        <option value="scadenza">Ordina per scadenza</option>
+        <option value="valore">Ordina per stima</option>
+        <option value="nome">Ordina per nome</option>
+      </select>
+    </div>
+    <div id="lista"></div>
+  </div>
+  <div id="attesa" class="attesa">Caricamento…</div>
+</main>
+<script>
+(function () {
+  var CFG = { sale: 'jIKxwJAoFMfvs6kkKTPSTg==', iter: 310000 };
+  var MEM = 'aste-correale-chiave';
+  var K = null, FILE = {}, URLS = {};
+  var $ = function (id) { return document.getElementById(id); };
+  var sub = window.crypto && window.crypto.subtle;
+
+  function daB64(s) { var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  function aB64(u) { var s = ''; for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }
+  function leggi(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function scrivi(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
+
+  function chiavi(bits) {
+    return Promise.all([
+      sub.importKey('raw', bits.slice(0, 32), { name: 'AES-CBC' }, false, ['decrypt']),
+      sub.importKey('raw', bits.slice(32, 64), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify'])
+    ]).then(function (k) { return { enc: k[0], mac: k[1], bits: bits }; });
+  }
+  function deriva(pw) {
+    return sub.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']).then(function (base) {
+      return sub.deriveBits({ name: 'PBKDF2', salt: daB64(CFG.sale), iterations: CFG.iter, hash: 'SHA-256' }, base, 512);
+    }).then(function (b) { return chiavi(new Uint8Array(b)); });
+  }
+  // blocco = IV(16) | testo cifrato AES-256-CBC | HMAC-SHA256(32) di IV+cifrato
+  function decifra(buf, k) {
+    var u = new Uint8Array(buf), n = u.length;
+    if (n < 64) return Promise.reject(new Error('dati'));
+    return sub.verify('HMAC', k.mac, u.slice(n - 32), u.slice(0, n - 32)).then(function (ok) {
+      if (!ok) throw new Error('password');
+      return sub.decrypt({ name: 'AES-CBC', iv: u.slice(0, 16) }, k.enc, u.slice(16, n - 32));
+    });
+  }
+  function scarica(nome, k) {
+    return fetch(nome, { cache: 'no-cache' }).then(function (r) {
+      if (!r.ok) throw new Error('rete');
+      return r.arrayBuffer();
+    }).then(function (b) { return decifra(b, k || K); });
+  }
+  // file originale (es. "Cartella/foto/x.jpg") -> URL blob decifrato
+  function urlFile(percorso, tipo) {
+    if (URLS[percorso]) return Promise.resolve(URLS[percorso]);
+    if (!FILE[percorso]) return Promise.reject(new Error('manca'));
+    return scarica(FILE[percorso]).then(function (b) {
+      return (URLS[percorso] = URL.createObjectURL(new Blob([b], { type: tipo })));
+    });
+  }
+
+  function entra(k, ricorda) {
+    return scarica('dati.bin', k).then(function (b) {
+      var p = JSON.parse(new TextDecoder().decode(b));
+      K = k; FILE = p.file || {};
+      if (ricorda) scrivi(MEM, aB64(k.bits));
+      window.ARCHIVIO = [];
+      (new Function(p.js + '\n;window.AGL = AGL;'))();
+      mostra(p.generato);
+    });
+  }
+  function chiediPassword(msg) {
+    $('attesa').hidden = true; $('archivio').hidden = true; $('esci').hidden = true;
+    $('accesso').hidden = false; $('errore').textContent = msg || ''; $('entra').disabled = false;
+    $('pw').value = ''; $('pw').focus();
+  }
+  $('accesso').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var pw = $('pw').value;
+    if (!pw) return;
+    $('entra').disabled = true; $('errore').textContent = 'Verifica in corso…';
+    deriva(pw).then(function (k) { return entra(k, $('ricorda').checked); }).catch(function (e) {
+      if (window.console) console.error(e);
+      chiediPassword(e && e.message === 'password' ? 'Password errata.' : 'Errore di caricamento: riprova.');
+    });
+  });
+  $('esci').addEventListener('click', function () { scrivi(MEM, null); location.reload(); });
+
+  if (!sub) { $('attesa').textContent = 'Questo browser non supporta la pagina: aprila con Chrome, Safari o Edge aggiornati.'; return; }
+  var salvata = leggi(MEM);
+  if (salvata) {
+    chiavi(daB64(salvata)).then(function (k) { return entra(k, true); }).catch(function () { scrivi(MEM, null); chiediPassword(); });
+  } else chiediPassword();
+
+  // ---------- archivio ----------
+  function copia(b) {
+    var t = b.previousElementSibling;
+    t.select();
+    var fatto = function () { b.textContent = 'Copiato'; setTimeout(function () { b.textContent = 'Copia testo'; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t.value).then(fatto, function () { document.execCommand('copy'); fatto(); });
+    else { document.execCommand('copy'); fatto(); }
+  }
+  function apriPdf(a) {
+    var w = window.open('', '_blank');
+    if (w) w.document.write('<p style="font-family:sans-serif;padding:20px">Apertura del resoconto…</p>');
+    urlFile(a.getAttribute('data-f'), 'application/pdf').then(function (u) {
+      if (w) w.location.href = u; else location.href = u;
+    }).catch(function () { if (w) w.close(); alert('Non riesco ad aprire il PDF.'); });
+  }
+  function caricaImmagine(det) {
+    var box = det.querySelector('.img');
+    if (!box || box.getAttribute('data-ok')) return;
+    box.setAttribute('data-ok', '1');
+    urlFile(box.getAttribute('data-f'), 'image/jpeg').then(function (u) {
+      box.querySelector('img').src = u;
+      var a = box.querySelector('a.scarica'); a.href = u; a.textContent = 'Scarica immagine';
+      var o = box.querySelector('a.apri'); o.href = u; o.hidden = false;
+    }).catch(function () { box.querySelector('a.scarica').textContent = 'Immagine non disponibile'; });
+  }
+
+  function mostra(generato) {
+    $('attesa').hidden = true; $('accesso').hidden = true; $('archivio').hidden = false; $('esci').hidden = false;
+    var A = window.ARCHIVIO;
+    $('oggi').textContent = 'Situazione al ' + new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) +
+      ' · ' + (A.length === 1 ? '1 resoconto' : A.length + ' resoconti') + (generato ? ' · aggiornato il ' + AGL.data(generato.slice(0, 10)) : '');
+    ['cerca', 'fStato', 'ordine'].forEach(function (id) { $(id).addEventListener('input', disegna); });
+    $('lista').addEventListener('click', function (ev) {
+      var t = ev.target;
+      var pdf = t.closest && t.closest('a[data-pdf]');
+      if (pdf) { ev.preventDefault(); ev.stopPropagation(); apriPdf(pdf); return; }
+      if (t.matches && t.matches('.soc button')) { copia(t); return; }
+      if (t.closest && t.closest('summary .chip a, .capo a[target]')) ev.stopPropagation();
+    });
+    $('lista').addEventListener('toggle', function (ev) {
+      var d = ev.target;
+      if (d.classList && d.classList.contains('soc') && d.open) caricaImmagine(d);
+    }, true);
+    disegna();
+  }
+
+  var e = function (n) { return AGL.euro(n); }, d = function (x) { return AGL.data(x); };
+  function scadenza(r) {
+    var best = null;
+    (r.lotti || []).forEach(function (l) {
+      if (l.stato !== 'in_asta') return;
+      var a = AGL.astaDi(r, l), m = AGL.momento(a.termineOfferte, a.oraTermine);
+      if (m && (!best || m < best.m)) best = { m: m, a: a };
+    });
+    return best;
+  }
+  function colore(r) {
+    var s = scadenza(r);
+    if (!s) return 'grigio';
+    var g = (s.m - Date.now()) / 86400000;
+    if (g < 0) return 'grigio';
+    return g <= 7 ? 'rosso' : g <= 15 ? 'arancio' : 'verde';
+  }
+  function tra(m) {
+    var ms = m - Date.now();
+    if (ms < 0) return 'scaduto';
+    var g = Math.floor(ms / 86400000);
+    if (g === 0) return 'oggi';
+    return g === 1 ? 'tra 1 giorno' : 'tra ' + g + ' giorni';
+  }
+  function statoOggi(r, l) {
+    var st = AGL.stato(l);
+    if (l.stato !== 'in_asta') return st;
+    var a = AGL.astaDi(r, l), fine = AGL.momento(a.data, '23:59'), term = AGL.momento(a.termineOfferte, a.oraTermine);
+    if (fine && Date.now() > fine) return ['Asta conclusa: esito da aggiornare', 'st-att'];
+    if (term && Date.now() > term) return ['Offerte chiuse, gara il ' + d(a.data), 'st-att'];
+    return st;
+  }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+
+  function disegna() {
+    var A = window.ARCHIVIO.slice();
+    var q = $('cerca').value.toLowerCase().trim(), fs = $('fStato').value, ord = $('ordine').value;
+    var aperte = {};
+    Array.prototype.forEach.call(document.querySelectorAll('details.asta[open]'), function (x) { aperte[x.getAttribute('data-c')] = 1; });
+
+    var lottiInAsta = 0, daAggiornare = 0, prossima = null, entro15 = 0;
+    A.forEach(function (r) {
+      (r.lotti || []).forEach(function (l) {
+        if (l.stato === 'in_asta') { lottiInAsta++; if (statoOggi(r, l)[0].indexOf('esito') > -1) daAggiornare++; }
+      });
+      var s = scadenza(r);
+      if (s && s.m > Date.now()) {
+        if (!prossima || s.m < prossima.m) prossima = { m: s.m, r: r, a: s.a };
+        if ((s.m - Date.now()) / 86400000 <= 15) entro15++;
+      }
+    });
+    $('tessere').innerHTML =
+      '<div class="tessera"><small>Aste in archivio</small><b>' + A.length + '</b><span>' + lottiInAsta + ' lotti in asta</span></div>' +
+      '<div class="tessera' + (prossima && (prossima.m - Date.now()) / 86400000 <= 7 ? ' urgente' : '') + '"><small>Prossima scadenza</small><b>' + (prossima ? d(prossima.a.termineOfferte) : '—') + '</b><span>' + (prossima ? tra(prossima.m) + ' · ' + prossima.r.procedura.titolo : 'nessuna scadenza aperta') + '</span></div>' +
+      '<div class="tessera"><small>Entro 15 giorni</small><b>' + entro15 + '</b><span>aste con offerte da presentare</span></div>' +
+      '<div class="tessera' + (daAggiornare ? ' urgente' : '') + '"><small>Esito da aggiornare</small><b>' + daAggiornare + '</b><span>lotti con asta già passata</span></div>';
+
+    A = A.filter(function (r) {
+      var lotti = (r.lotti || []).filter(function (l) {
+        return !fs || (fs === 'altro' ? (l.stato !== 'in_asta' && l.stato !== 'venduto') : l.stato === fs);
+      });
+      if (!lotti.length) return false;
+      if (!q) return true;
+      var testo = [r.procedura.titolo, r.procedura.tribunale, r.procedura.intestazione, r.cartella].concat((r.lotti || []).map(function (l) {
+        return [l.nome, l.comune, l.descrizione, (l.codici || []).map(function (c) { return c.codice; }).join(' ')].join(' ');
+      })).join(' ').toLowerCase();
+      return testo.indexOf(q) > -1;
+    });
+    A.sort(function (a, b) {
+      if (ord === 'nome') return (a.procedura.titolo + a.procedura.tribunale).localeCompare(b.procedura.titolo + b.procedura.tribunale);
+      if (ord === 'valore') { var v = function (r) { return (r.lotti || []).reduce(function (t, l) { return t + (Number(l.stima) || 0); }, 0); }; return v(b) - v(a); }
+      var sa = scadenza(a), sb = scadenza(b), ora = Date.now();
+      var ka = !sa ? 9e15 : (sa.m < ora ? 8e15 - sa.m : +sa.m), kb = !sb ? 9e15 : (sb.m < ora ? 8e15 - sb.m : +sb.m);
+      return ka - kb;
+    });
+
+    var h = [];
+    A.forEach(function (r) {
+      var L = r.lotti || [], s = scadenza(r), col = colore(r), a = s ? s.a : (r.asta || {});
+      var nIn = L.filter(function (l) { return l.stato === 'in_asta'; }).length;
+      var nV = L.filter(function (l) { return l.stato === 'venduto'; }).length;
+      var nAltro = L.length - nIn - nV;
+      var pdf = r.cartella + '/Resoconto perizia.pdf';
+      h.push('<details class="asta ' + col + '" data-c="' + esc(r.cartella) + '"' + (aperte[r.cartella] ? ' open' : '') + '><summary class="capo">' +
+        '<div class="scad ' + col + '"><small>Scadenza offerte</small><b>' + (s ? d(a.termineOfferte) : '—') + '</b><span>' + (s ? (a.oraTermine ? 'ore ' + a.oraTermine + ' · ' : '') + tra(s.m) : 'nessun lotto in asta') + '</span></div>' +
+        '<div class="esp"><b>' + (a.esperimento ? a.esperimento + '°' : '—') + '</b><small>esperimento</small></div>' +
+        '<h2>' + r.procedura.titolo + ' – ' + r.procedura.tribunale + '<small>' + (r.procedura.intestazione || '') + '</small></h2>' +
+        '<div class="info">' +
+          '<div class="chip"><small>Data asta</small><b>' + d(a.data) + (a.ora ? ' ore ' + a.ora : '') + '</b></div>' +
+          '<div class="chip"><small>Lotti nella stessa asta</small><b>' + nIn + ' su ' + L.length + '</b>' + (nV ? ' · ' + nV + ' venduti' : '') + (nAltro ? ' · ' + nAltro + ' non in asta' : '') + '</div>' +
+          '<div class="chip"><small>Dove</small><b>' + (a.portale || '—') + '</b></div>' +
+          (r.verificaOnline ? '<div class="chip"><small>Verificato online</small><b>' + d(r.verificaOnline.data) + '</b></div>' : '') +
+        '</div>' +
+        '<div class="bottoni">' + (FILE[pdf] ? '<a href="#" data-pdf data-f="' + esc(pdf) + '">Resoconto PDF</a>' : '') +
+        '<span class="freccia"><span class="ch">Vedi lotti</span><span class="ap">Chiudi</span></span></div></summary>');
+      h.push('<div class="scorri"><table><tr><th>Lotto</th><th>Immobile</th><th>Quota</th><th class="n">Stima</th><th class="n">Base d\'asta</th><th class="n">Offerta minima</th><th>Valutazione</th><th>Stato</th><th>Annuncio</th></tr>');
+      L.forEach(function (l) {
+        var st = statoOggi(r, l), v = l.valutazione;
+        var sconto = (l.stima && l.offertaMinima && l.offertaMinima < l.stima) ? '<br><span class="sconto">−' + Math.round((1 - l.offertaMinima / l.stima) * 100) + '% sulla stima</span>' : '';
+        var val = v && v.posizione ? '<details><summary><span class="scelta' + (v.posizione === 1 ? ' prima' : '') + '">' + (L.length === 1 ? 'Valutazione' : v.posizione + 'ª scelta') + '</span> <small style="color:var(--grigio)">perché ▾</small></summary><p><span class="pro">A favore:</span> ' + v.pro + '</p><p><span class="contro">Contro:</span> ' + v.contro + '</p></details>' : '—';
+        var cod = (l.codici || []).map(function (c) { return c.portale + ' ' + (c.url ? '<a href="' + c.url + '" target="_blank" rel="noopener"><b>' + c.codice + '</b></a>' : '<b>' + c.codice + '</b>'); }).join('<br>') || '—';
+        var img = '';
+        if (l.socialFoto) {
+          var f = r.cartella + '/foto/' + l.socialFoto;
+          var nome = (r.cartella + ' lotto ' + l.numero).replace(/[^\w\- ]+/g, '').replace(/\s+/g, '_') + '.jpg';
+          if (FILE[f]) img = '<div class="img" data-f="' + esc(f) + '"><img alt=""><div><a class="scarica" download="' + nome + '">Caricamento…</a><br><a class="apri" target="_blank" hidden>Apri</a></div></div>';
+        }
+        var soc = l.social ? '<details class="soc"><summary>Descrizione Social ▾</summary><textarea readonly rows="3">' + esc(l.social.trim()) + '</textarea><button type="button">Copia testo</button>' + img + '</details>' : '';
+        h.push('<tr><td data-e="Lotto"><span class="lotto">' + l.numero + '</span></td><td><b>' + l.nome + '</b>' + (l.comune ? '<br><small style="color:var(--grigio)">' + l.comune + '</small>' : '') + soc + '</td><td data-e="Quota">' + (l.quota || '—') + '</td>' +
+          '<td class="n" data-e="Stima">' + e(l.stima) + (l.stimaNota ? '<br><small>(' + l.stimaNota + ')</small>' : '') + '</td><td class="n" data-e="Base d\'asta">' + e(l.base) + '</td><td class="n" data-e="Offerta minima"><b>' + e(l.offertaMinima) + '</b>' + sconto + '</td>' +
+          '<td data-e="Valutazione">' + val + '</td><td class="' + st[1] + '" data-e="Stato">' + st[0] + (l.statoNota ? '<br><small>' + l.statoNota + '</small>' : '') + '</td><td data-e="Annuncio">' + cod + '</td></tr>');
+      });
+      h.push('</table></div>');
+      if (r.copertina && r.copertina.avviso) h.push('<div class="avviso">' + r.copertina.avviso + '</div>');
+      h.push('</details>');
+    });
+    $('lista').innerHTML = h.join('') || '<div class="vuoto">Nessun resoconto corrisponde alla ricerca.</div>';
+  }
+})();
+</script>
+</body>
+</html>
