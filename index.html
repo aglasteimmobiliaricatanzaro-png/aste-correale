@@ -91,12 +91,40 @@
   .sconto{color:var(--ok);font-weight:700}
   .avviso{background:var(--attbg);border-left:4px solid var(--att);padding:6px 16px;font-size:12.5px}
   .vuoto{background:#fff;border-radius:10px;padding:30px;text-align:center;color:var(--grigio)}
+  /* aggiungi asta da link */
+  .aggiungi{background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  .aggiungi form{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .aggiungi label{font-weight:700;color:var(--blu);font-size:15px}
+  .aggiungi input{flex:1;min-width:240px;font:inherit;font-size:15px;padding:8px 10px;border:1px solid var(--riga);border-radius:6px}
+  .aggiungi button,.mini{font:inherit;font-weight:600;font-size:13px;border:0;border-radius:6px;padding:8px 14px;cursor:pointer;background:var(--blu);color:#fff}
+  .aggiungi .msg{font-size:12.5px;margin-top:6px;color:var(--grigio)} .aggiungi .msg.err{color:var(--rosso)}
+  .coda{margin-top:8px;display:grid;gap:4px}
+  .coda div{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px;background:var(--chiaro);border-radius:6px;padding:5px 8px}
+  .coda a{color:var(--blu2);overflow-wrap:anywhere;flex:1;min-width:200px}
+  .coda .st{font-weight:700;border-radius:4px;padding:1px 7px;background:#fff}
+  .coda .st.att{color:var(--att)} .coda .st.lav{color:var(--blu2)} .coda .st.err{color:var(--rosso)} .coda .st.ok{color:var(--ok)}
+  .mini{padding:4px 9px;font-size:12px}
+  .mini.chiaro{background:#fff;color:var(--blu);border:1px solid var(--riga)}
+  .mini.rosso{background:#fff;color:var(--rosso);border:1px solid #e8b4b4}
+  .bottoni a.vai{background:#16794a}
+  .bottoni .mini{white-space:nowrap}
+  .om{background:var(--okbg);color:var(--ok);border-radius:8px;padding:5px 12px;text-align:center;min-width:150px}
+  .om small{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em}
+  .om b{display:block;font-size:24px;line-height:1.15}
+  .om span{font-size:11.5px}
+  td.n b.omin{font-size:17px;color:var(--ok)}
+  .chip.visite{background:#fdf0e6} .chip.visite b{color:var(--att)} .chip.visite.scaduta b{color:var(--grigio)}
+  details.asta.nascosta{opacity:.6} tr.nascosto td{opacity:.55}
+  .tipo.t-nasc{background:#eceff3;color:#5b6675} .tipo.t-elim{background:var(--rossobg);color:var(--rosso)}
+  .mostraNasc{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--grigio)}
+  .filtri .mostraNasc input{flex:none;min-width:0;width:auto}
   .attesa{text-align:center;color:var(--grigio);padding:40px}
   @media (max-width:900px){.tessere{grid-template-columns:repeat(2,1fr)}}
   @media (max-width:760px){
     .capo{gap:10px;padding:12px}
     .capo h2{min-width:100%;order:-1}
-    .scad,.esp{min-width:0;flex:1}
+    .scad,.esp,.om{min-width:0;flex:1}
+    .bottoni{flex-wrap:wrap;gap:6px}
     .info .chip{flex:1 1 40%}
     .bottoni{width:100%;justify-content:space-between}
     table,tbody,tr,td{display:block;width:100%}
@@ -128,6 +156,15 @@
     <div id="errore"></div>
   </form>
   <div id="archivio" hidden>
+    <div class="aggiungi">
+      <form id="fAggiungi">
+        <label for="linkAsta">Aggiungi asta</label>
+        <input id="linkAsta" type="url" inputmode="url" placeholder="Incolla qui il link della scheda dell'asta (https://…)" autocomplete="off">
+        <button type="submit">Procedi</button>
+      </form>
+      <div class="msg" id="msgAggiungi">Il link entra in coda: il resoconto lo prepara Claude quando gli scrivi "nuove perizie".</div>
+      <div class="coda" id="coda"></div>
+    </div>
     <div class="tessere" id="tessere"></div>
     <div class="filtri">
       <input id="cerca" type="search" placeholder="Cerca via, comune, immobile, codice…">
@@ -150,6 +187,7 @@
         <option value="valore">Ordina per stima</option>
         <option value="nome">Ordina per nome</option>
       </select>
+      <label class="mostraNasc"><input type="checkbox" id="mostraNasc"> Mostra nascoste ed eliminate</label>
     </div>
     <div id="lista"></div>
   </div>
@@ -222,8 +260,69 @@
     sub.digest('SHA-256', u).then(function (h) {
       CH = aB64(new Uint8Array(h)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
       $('vaiStudio').href = STUDIO + '/#area=' + CH;
-      statoPost();
+      statoPost(); caricaArea();
     });
+  }
+  // ---------- dati condivisi sul server: coda dei link, aste nascoste/eliminate ----------
+  var AREA = { coda: [], nascoste: {}, eliminate: {}, sopralluoghi: [] }, areaOk = false;
+  function caricaArea() {
+    if (!CH) return;
+    fetch(STUDIO + '/api/area/dati', { headers: { 'x-chiave-area': CH }, cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (a) {
+      if (!a) return;
+      var cambiato = JSON.stringify(a) !== JSON.stringify(AREA);
+      AREA = a; areaOk = true;
+      if (cambiato && !$('archivio').hidden) { disegnaCoda(); disegna(); }
+    }).catch(function () {});
+  }
+  window.addEventListener('focus', caricaArea);
+  setInterval(function () { if (!document.hidden) caricaArea(); }, 60000);
+  function opArea(corpo) {
+    if (!CH) return Promise.reject(new Error('Accesso non ancora pronto: riprova tra un attimo.'));
+    return fetch(STUDIO + '/api/area/dati', { method: 'POST', headers: { 'x-chiave-area': CH, 'content-type': 'application/json' }, body: JSON.stringify(corpo) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.errore || 'Errore del server'); return j; }); })
+      .then(function (j) { if (j.dati) { AREA = j.dati; areaOk = true; } disegnaCoda(); disegna(); return j; });
+  }
+  var ST_CODA = { 'da elaborare': ['att', 'In coda'], 'in lavorazione': ['lav', 'In lavorazione'], 'errore': ['err', 'Problema'], 'fatto': ['ok', 'Resoconto pronto'] };
+  function disegnaCoda() {
+    var voci = (AREA.coda || []).filter(function (v) { return v.stato !== 'fatto' || Date.now() - new Date(v.aggiornato || v.quando) < 7 * 86400000; });
+    $('coda').innerHTML = voci.slice().reverse().map(function (v) {
+      var s = ST_CODA[v.stato] || ['att', v.stato];
+      return '<div><span class="st ' + s[0] + '">' + s[1] + '</span><a href="' + esc(v.url) + '" target="_blank" rel="noopener">' + esc(v.url) + '</a>' +
+        (v.cartella ? '<b>' + esc(v.cartella) + '</b>' : '') + (v.messaggio ? '<span style="flex-basis:100%">' + esc(v.messaggio) + '</span>' : '') +
+        '<small style="color:var(--grigio)">' + new Date(v.quando).toLocaleDateString('it-IT') + '</small>' +
+        (v.stato !== 'in lavorazione' ? '<button type="button" class="mini chiaro" data-togli="' + esc(v.id) + '">Togli</button>' : '') + '</div>';
+    }).join('');
+  }
+  $('fAggiungi').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var u = $('linkAsta').value.trim(), m = $('msgAggiungi');
+    if (!/^https?:\/\/\S+$/i.test(u)) { m.className = 'msg err'; m.textContent = 'Incolla l\'indirizzo completo della scheda, che inizia con https://'; return; }
+    m.className = 'msg'; m.textContent = 'Invio…';
+    opArea({ op: 'coda+', url: u }).then(function () {
+      $('linkAsta').value = ''; m.className = 'msg';
+      m.textContent = 'Link in coda. Scrivi a Claude "nuove perizie": scaricherà i documenti, preparerà il resoconto e lo aggiungerà qui.';
+    }).catch(function (e) { m.className = 'msg err'; m.textContent = e.message; });
+  });
+  $('coda').addEventListener('click', function (ev) {
+    var b = ev.target.closest && ev.target.closest('[data-togli]'); if (!b) return;
+    opArea({ op: 'coda-', id: b.getAttribute('data-togli') }).catch(function (e) { alert(e.message); });
+  });
+  function nascosta(c) { return !!(AREA.nascoste || {})[c]; }
+  function eliminata(c) { return !!(AREA.eliminate || {})[c]; }
+  // link alla scheda dell'asta: campo "link" del resoconto, altrimenti il primo annuncio con indirizzo
+  function linkAsta(r, L) {
+    if (r.link) return r.link;
+    var u = null;
+    (L || r.lotti || []).concat(r.lotti || []).some(function (l) { return (l.codici || []).some(function (c) { if (c.url) { u = c.url; return true; } }); });
+    return u;
+  }
+  // ultimo giorno utile per chiedere la visita: campo asta.termineVisite, altrimenti 10 giorni prima del termine offerte (indicativo)
+  function termineVisite(a) {
+    if (a.termineVisite) return { data: a.termineVisite, stima: false };
+    if (!a.termineOfferte) return null;
+    var t = new Date(a.termineOfferte + 'T12:00:00'); t.setDate(t.getDate() - 10);
+    var p = function (n) { return String(n).padStart(2, '0'); };
+    return { data: t.getFullYear() + '-' + p(t.getMonth() + 1) + '-' + p(t.getDate()), stima: true };
   }
   // stato dei post creati da qui ("Pubblica post"), letto da Studio Social
   function statoPost() {
@@ -327,9 +426,25 @@
     var comuni = {};
     A.forEach(function (r) { (r.lotti || []).forEach(function (l) { comuni[nomeComune(l)] = 1; }); });
     Object.keys(comuni).sort().forEach(function (c) { var o = document.createElement('option'); o.value = c; o.textContent = c; $('fComune').appendChild(o); });
-    ['cerca', 'fComune', 'fTipo', 'fStato', 'ordine'].forEach(function (id) { $(id).addEventListener('input', disegna); });
+    ['cerca', 'fComune', 'fTipo', 'fStato', 'ordine', 'mostraNasc'].forEach(function (id) { $(id).addEventListener('input', disegna); });
+    disegnaCoda();
     $('lista').addEventListener('click', function (ev) {
       var t = ev.target;
+      var az = t.closest && t.closest('[data-az]');
+      if (az) {
+        ev.preventDefault(); ev.stopPropagation();
+        var tipo = az.getAttribute('data-az'), k = az.getAttribute('data-k');
+        var p;
+        if (tipo === 'nascondi') p = opArea({ op: 'nascondi', chiave: k, valore: true });
+        else if (tipo === 'mostra') p = opArea({ op: 'nascondi', chiave: k, valore: false });
+        else if (tipo === 'elimina') {
+          if (!confirm('Eliminare dall\'archivio questa asta?\n\nSparisce dall\'elenco; resoconto e documenti non vengono cancellati (finiscono tra le eliminate e si possono ripristinare).')) return;
+          p = opArea({ op: 'elimina', cartella: k, valore: true });
+        } else if (tipo === 'ripristina') p = opArea({ op: 'elimina', cartella: k, valore: false });
+        if (p) p.catch(function (e) { alert(e.message); });
+        return;
+      }
+      if (t.closest && t.closest('.capo a.vai')) { ev.stopPropagation(); return; }
       var pdf = t.closest && t.closest('a[data-pdf]');
       if (pdf) { ev.preventDefault(); ev.stopPropagation(); apriPdf(pdf); return; }
       if (t.matches && t.matches('.soc button.post')) { pubblicaPost(t); return; }
@@ -380,7 +495,8 @@
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
 
   function disegna() {
-    var A = window.ARCHIVIO.slice();
+    var mn = $('mostraNasc').checked;
+    var A = window.ARCHIVIO.filter(function (r) { return mn || (!eliminata(r.cartella) && !nascosta(r.cartella)); });
     var q = $('cerca').value.toLowerCase().trim(), fs = $('fStato').value, ord = $('ordine').value;
     var aperte = {};
     Array.prototype.forEach.call(document.querySelectorAll('details.asta[open]'), function (x) { aperte[x.getAttribute('data-c')] = 1; });
@@ -408,6 +524,7 @@
     A.forEach(function (r) {
       var gruppi = {};
       (r.lotti || []).forEach(function (l) {
+        if (!mn && nascosta(r.cartella + '|' + l.numero)) return;
         if (fs && !(fs === 'altro' ? (l.stato !== 'in_asta' && l.stato !== 'venduto') : l.stato === fs)) return;
         var c = nomeComune(l);
         if (fc && c !== fc) return;
@@ -447,16 +564,31 @@
           (ps && ps.stato === 'pubblicato' ? ' <span class="tipo t-post">Post pubblicato</span>' : '') +
           '<small>' + (LT.length > 1 ? 'Lotto ' + l.numero + ' · ' : '') + esc(l.nome) + ' · offerta minima ' + e(l.offertaMinima) + '</small></span>';
       }).join('');
-      h.push('<details class="asta ' + col + '" data-c="' + esc(idc) + '"' + (aperte[idc] ? ' open' : '') + '><summary class="capo">' +
+      var elim = eliminata(r.cartella), nasc = nascosta(r.cartella);
+      // offerta minima in evidenza: quella del lotto, o la più bassa tra i lotti mostrati
+      var oms = L.filter(function (l) { return l.offertaMinima; }).map(function (l) { return Number(l.offertaMinima); });
+      var omMin = oms.length ? Math.min.apply(null, oms) : null;
+      var lOm = L.length === 1 ? L[0] : null, pRisp = lOm ? risparmio(lOm) : 0;
+      var om = '<div class="om"><small>Offerta minima</small><b>' + (omMin ? (L.length > 1 ? 'da ' : '') + e(omMin) : '—') + '</b><span>' + (pRisp > 0 ? '−' + pRisp + '% sulla stima' : (L.length > 1 ? L.length + ' lotti' : '')) + '</span></div>';
+      var tv = s ? termineVisite(a) : null, tvM = tv ? AGL.momento(tv.data, '23:59') : null;
+      var vai = linkAsta(r, L);
+      h.push('<details class="asta ' + col + (elim || nasc ? ' nascosta' : '') + '" data-c="' + esc(idc) + '"' + (aperte[idc] ? ' open' : '') + '><summary class="capo">' +
         '<div class="scad ' + col + '"><small>Scadenza offerte</small><b>' + (s ? d(a.termineOfferte) : '—') + '</b><span>' + (s ? (a.oraTermine ? 'ore ' + a.oraTermine + ' · ' : '') + tra(s.m) : 'nessun lotto in asta') + '</span></div>' +
+        om +
         '<div class="esp"><b>' + (a.esperimento ? a.esperimento + '°' : '—') + '</b><small>esperimento</small></div>' +
-        '<h2>' + immobili + '<small class="proc">' + r.procedura.titolo + ' – ' + r.procedura.tribunale + '</small></h2>' +        '<div class="info">' +
+        '<h2>' + (elim ? '<span class="tipo t-elim">Eliminata</span> ' : nasc ? '<span class="tipo t-nasc">Nascosta</span> ' : '') + immobili + '<small class="proc">' + r.procedura.titolo + ' – ' + r.procedura.tribunale + '</small></h2>' +        '<div class="info">' +
+          (tv ? '<div class="chip visite' + (tvM && tvM < Date.now() ? ' scaduta' : '') + '"><small>Chiedi la visita entro</small><b>' + d(tv.data) + '</b>' + (tvM && tvM < Date.now() ? ' · scaduto' : tvM ? ' · ' + tra(tvM) : '') + (tv.stima ? '<br><small style="text-transform:none;letter-spacing:0">indicativo: verifica nell\'avviso</small>' : '') + '</div>' : '') +
           '<div class="chip"><small>Data asta</small><b>' + d(a.data) + (a.ora ? ' ore ' + a.ora : '') + '</b></div>' +
           '<div class="chip"><small>Lotti nella stessa asta</small><b>' + nIn + ' su ' + L.length + '</b>' + (nV ? ' · ' + nV + ' venduti' : '') + (nAltro ? ' · ' + nAltro + ' non in asta' : '') + '</div>' +
           '<div class="chip"><small>Dove</small><b>' + (a.portale || '—') + '</b></div>' +
           (r.verificaOnline ? '<div class="chip"><small>Verificato online</small><b>' + d(r.verificaOnline.data) + '</b></div>' : '') +
         '</div>' +
-        '<div class="bottoni">' + (FILE[pdf] ? '<a href="#" data-pdf data-f="' + esc(pdf) + '">Resoconto PDF</a>' : '') +
+        '<div class="bottoni">' + (vai ? '<a class="vai" href="' + esc(vai) + '" target="_blank" rel="noopener">Vai all\'asta ↗</a>' : '') +
+        (FILE[pdf] ? '<a href="#" data-pdf data-f="' + esc(pdf) + '">Resoconto PDF</a>' : '') +
+        (elim ? '<button type="button" class="mini chiaro" data-az="ripristina" data-k="' + esc(r.cartella) + '">Ripristina</button>'
+          : (nasc ? '<button type="button" class="mini chiaro" data-az="mostra" data-k="' + esc(r.cartella) + '">Mostra di nuovo</button>'
+            : '<button type="button" class="mini chiaro" data-az="nascondi" data-k="' + esc(r.cartella) + '" title="Toglie l\'asta dall\'elenco; si rivede con «Mostra nascoste»">Nascondi</button>') +
+            '<button type="button" class="mini rosso" data-az="elimina" data-k="' + esc(r.cartella) + '">Elimina</button>') +
         '<span class="freccia"><span class="ch">Vedi lotti</span><span class="ap">Chiudi</span></span></div></summary>');
       h.push('<div class="scorri"><table><tr><th>Lotto</th><th>Immobile</th><th>Quota</th><th class="n">Stima</th><th class="n">Base d\'asta</th><th class="n">Offerta minima</th><th>Valutazione</th><th>Stato</th><th>Annuncio</th></tr>');
       L.forEach(function (l) {
@@ -471,8 +603,10 @@
           if (FILE[f]) img = '<div class="img" data-f="' + esc(f) + '"><img alt=""><div><a class="scarica" download="' + nome + '">Caricamento…</a><br><a class="apri" target="_blank" hidden>Apri</a></div></div>';
         }
         var soc = l.social ? '<details class="soc"><summary>Descrizione Social ▾</summary>' + rigaRisparmio(l) + '<textarea readonly rows="3">' + esc(l.social.trim()) + '</textarea><button type="button" class="copia">Copia testo</button>' + bottonePost(r, l) + img + '</details>' : '';
-        h.push('<tr><td data-e="Lotto"><span class="lotto">' + l.numero + '</span></td><td><b>' + l.nome + '</b>' + (l.comune ? '<br><small style="color:var(--grigio)">' + l.comune + '</small>' : '') + soc + '</td><td data-e="Quota">' + (l.quota || '—') + '</td>' +
-          '<td class="n" data-e="Stima">' + e(l.stima) + (l.stimaNota ? '<br><small>(' + l.stimaNota + ')</small>' : '') + '</td><td class="n" data-e="Base d\'asta">' + e(l.base) + '</td><td class="n" data-e="Offerta minima"><b>' + e(l.offertaMinima) + '</b>' + sconto + '</td>' +
+        var kl = r.cartella + '|' + l.numero, ln = nascosta(kl);
+        var bl = LT.length > 1 ? '<br><button type="button" class="mini chiaro" style="margin-top:6px" data-az="' + (ln ? 'mostra' : 'nascondi') + '" data-k="' + esc(kl) + '" title="' + (ln ? 'Rimette il lotto nell\'elenco' : 'Toglie solo questo lotto dall\'elenco') + '">' + (ln ? 'Mostra' : 'Nascondi') + '</button>' : '';
+        h.push('<tr' + (ln ? ' class="nascosto"' : '') + '><td data-e="Lotto"><span class="lotto">' + l.numero + '</span>' + bl + '</td><td><b>' + l.nome + '</b>' + (l.comune ? '<br><small style="color:var(--grigio)">' + l.comune + '</small>' : '') + soc + '</td><td data-e="Quota">' + (l.quota || '—') + '</td>' +
+          '<td class="n" data-e="Stima">' + e(l.stima) + (l.stimaNota ? '<br><small>(' + l.stimaNota + ')</small>' : '') + '</td><td class="n" data-e="Base d\'asta">' + e(l.base) + '</td><td class="n" data-e="Offerta minima"><b class="omin">' + e(l.offertaMinima) + '</b>' + sconto + '</td>' +
           '<td data-e="Valutazione">' + val + '</td><td class="' + st[1] + '" data-e="Stato">' + st[0] + (l.statoNota ? '<br><small>' + l.statoNota + '</small>' : '') + '</td><td data-e="Annuncio">' + cod + '</td></tr>');
       });
       h.push('</table></div>');
