@@ -88,6 +88,21 @@
   .soc button{font:inherit;font-size:12.5px;font-weight:600;background:var(--blu2);color:#fff;border:0;border-radius:6px;padding:6px 12px;cursor:pointer}
   .soc button.post{background:#b85c00;margin-left:6px} .soc button.post.bozza{background:#6b7280} .soc button.post.prog{background:#1d4ed8} .soc button.post.fatto{background:#16794a}
   .tipo.t-post{background:#dcf3e6;color:#16794a}
+  .tipo.t-viv{background:#fff1d6;color:#9a5b00} .tipo.t-nuovo{background:#1d6b3a;color:#fff} .tipo.t-att{background:var(--attbg);color:var(--att)}
+  .vivnota{background:var(--attbg);border-left:4px solid var(--att);padding:8px 16px;font-size:12.5px}
+  .vivnota a{font-weight:600;margin-left:6px}
+  #vivacizzabili{margin-top:34px}
+  #vivacizzabili h2.vivtit{margin:0 0 4px;color:var(--blu);font-size:22px} #vivacizzabili h2.vivtit small{font-weight:400;color:var(--grigio);font-size:13px}
+  #vivacizzabili .vivspiega{margin:0 0 6px;color:var(--grigio);font-size:13px;max-width:900px}
+  #vivacizzabili h4{margin:14px 0 4px;color:var(--blu2);font-size:15px}
+  #vivacizzabili details.prov{background:#fff;border-radius:10px;margin:0 0 10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+  #vivacizzabili details.prov>summary{cursor:pointer;padding:12px 16px;font-weight:700;color:var(--blu);font-size:16px} #vivacizzabili details.prov>summary small{font-weight:400;color:var(--grigio);font-size:13px}
+  #vivacizzabili details.prov .dentro{padding:0 16px 12px}
+  table.vivtab{width:100%;border-collapse:collapse;background:#fff;font-size:13px;margin-bottom:6px}
+  table.vivtab th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--grigio);padding:6px 8px;border-bottom:2px solid var(--riga)}
+  table.vivtab td{padding:7px 8px;border-bottom:1px solid var(--riga);vertical-align:top} table.vivtab td.n,table.vivtab th.n{text-align:right;white-space:nowrap}
+  table.vivtab tr.nuovo td{background:#f0f8f3}
+  table.vivtab a{font-weight:600;white-space:nowrap}
   .soc .risp{font-size:12.5px;margin:6px 0 2px;color:var(--grigio)} .soc .risp b{color:#16794a}
   .soc .img{display:flex;gap:10px;align-items:flex-end;margin-top:8px}
   .soc img{width:96px;height:120px;object-fit:cover;border-radius:6px;background:var(--chiaro)}
@@ -199,6 +214,7 @@
       <label class="mostraNasc"><input type="checkbox" id="mostraNasc"> Mostra nascoste ed eliminate</label>
     </div>
     <div id="lista"></div>
+    <div id="vivacizzabili"></div>
   </div>
   <div id="attesa" class="attesa">Caricamento…</div>
 </main>
@@ -265,7 +281,7 @@
   function entra(k, ricorda) {
     return scarica('dati.bin', k).then(function (b) {
       var p = JSON.parse(new TextDecoder().decode(b));
-      K = k; FILE = p.file || {};
+      K = k; FILE = p.file || {}; window.VIV = p.viv || null;
       if (ricorda) scrivi(MEM, aB64(k.bits));
       chiaveStudio(k.bits);
       window.ARCHIVIO = [];
@@ -439,6 +455,55 @@
     }).catch(function () { box.querySelector('a.scarica').textContent = 'Immagine non disponibile'; });
   }
 
+  // ---------- immobili vivacizzabili (mail AGL) ----------
+  function vivDi(idc) {
+    var V = window.VIV; if (!V) return null;
+    for (var i = 0; i < V.immobili.length; i++) if (V.immobili[i].archivio === idc) return V.immobili[i];
+    return null;
+  }
+  function vivBadge(idc) {
+    var v = vivDi(idc);
+    return v ? '<span class="tipo t-viv">Vivacizzabile</span> ' + (v.nuovo ? '<span class="tipo t-nuovo">Nuovo</span> ' : '') : '';
+  }
+  function vivNota(idc) {
+    var v = vivDi(idc);
+    return v ? '<div class="vivnota"><b>Vivacizzabile AGL.</b> Se segnali ad AGL il nominativo del tuo cliente che partecipa a quest\'asta, ottieni una fee aggiuntiva anche se il cliente non si aggiudica l\'immobile. Segnala il prima possibile e comunque entro 3 giorni lavorativi dall\'asta: la fee va a chi segnala per primo.' +
+      (v.segnala ? ' <a href="' + esc(v.segnala) + '" target="_blank" rel="noopener">Segnala il cliente ↗</a>' : '') + '</div>' : '';
+  }
+  function vivRiga(i, conStato) {
+    var stato = conStato ? (i.archivio ? '<span class="tipo t-post">Già in archivio</span>' : (i.inCoda ? '<span class="tipo t-att">In coda: scheda in preparazione</span>' : '')) : '';
+    return '<tr' + (i.nuovo ? ' class="nuovo"' : '') + '><td>' + (i.nuovo ? '<span class="tipo t-nuovo">Nuovo</span> ' : '') + '<b>' + esc(i.via) + '</b><br><small style="color:var(--grigio)">' + esc(i.comune) + ' · ' + esc(i.tipo) + '</small>' + (stato ? '<br>' + stato : '') + '</td>' +
+      '<td class="n">' + AGL.euro(i.prezzo) + '</td><td class="n">' + AGL.data(i.data) + '</td><td>' + esc(i.tribunale) + '<br><small style="color:var(--grigio)">' + esc(String(i.lotto)) + '</small></td>' +
+      '<td>' + (i.link ? '<a href="' + esc(i.link) + '" target="_blank" rel="noopener">Annuncio ↗</a><br>' : '') + (i.segnala ? '<a href="' + esc(i.segnala) + '" target="_blank" rel="noopener">Segnala ↗</a>' : '') + '</td></tr>';
+  }
+  function vivTabella(righe, conStato) {
+    righe.sort(function (a, b) { return a.data.localeCompare(b.data); });
+    return '<div class="scorri"><table class="vivtab"><tr><th>Immobile</th><th class="n">Offerta minima</th><th class="n">Data asta</th><th>Tribunale / lotto</th><th>Link</th></tr>' +
+      righe.map(function (i) { return vivRiga(i, conStato); }).join('') + '</table></div>';
+  }
+  function disegnaViv() {
+    var V = window.VIV, box = $('vivacizzabili');
+    if (!V) { box.innerHTML = ''; return; }
+    var cz = V.immobili.filter(function (i) { return i.provincia === 'Catanzaro'; });
+    var alt = V.immobili.filter(function (i) { return i.provincia !== 'Catanzaro'; });
+    var nuovi = V.immobili.filter(function (i) { return i.nuovo; }).length;
+    var h = ['<h2 class="vivtit">Immobili vivacizzabili AGL <small>mail del ' + AGL.data(V.mail) + ' · ' + V.totale + ' immobili' + (nuovi ? ' · ' + nuovi + ' nuovi' : '') + '</small></h2>',
+      '<p class="vivspiega">Aste per cui AGL riconosce una fee aggiuntiva se segnali per primo il tuo cliente che partecipa, comunque vada l\'asta. «Nuovo» indica gli immobili comparsi nell\'ultima mail e non presenti nella precedente; il segno resta fino alla mail successiva.</p>',
+      '<h3 class="comune">Catanzaro e provincia <small>' + cz.length + ' immobili</small></h3>', vivTabella(cz, true),
+      '<h3 class="comune">Altre province <small>' + alt.length + ' immobili</small></h3>'];
+    var prov = {};
+    alt.forEach(function (i) { ((prov[i.provincia] = prov[i.provincia] || {})[i.comune] = prov[i.provincia][i.comune] || []).push(i); });
+    Object.keys(prov).sort().forEach(function (p) {
+      var n = 0; Object.keys(prov[p]).forEach(function (c) { n += prov[p][c].length; });
+      h.push('<details class="prov"><summary>' + esc(p) + ' <small>' + n + ' immobili</small></summary><div class="dentro">');
+      Object.keys(prov[p]).sort().forEach(function (c) {
+        h.push('<h4>' + esc(c) + ' <small style="font-weight:400;color:var(--grigio)">' + prov[p][c].length + '</small></h4>', vivTabella(prov[p][c], false));
+      });
+      h.push('</div></details>');
+    });
+    box.innerHTML = h.join('');
+  }
+
   function mostra(generato) {
     $('attesa').hidden = true; $('accesso').hidden = true; $('archivio').hidden = false; $('esci').hidden = false; $('menu').hidden = false;
     var A = window.ARCHIVIO;
@@ -597,7 +662,7 @@
         '<div class="scad ' + col + '"><small>Scadenza offerte</small><b>' + (s ? d(a.termineOfferte) : '—') + '</b><span>' + (s ? (a.oraTermine ? 'ore ' + a.oraTermine + ' · ' : '') + tra(s.m) : 'nessun lotto in asta') + '</span></div>' +
         om +
         '<div class="esp"><b>' + (a.esperimento ? a.esperimento + '°' : '—') + '</b><small>esperimento</small></div>' +
-        '<h2>' + (elim ? '<span class="tipo t-elim">Eliminata</span> ' : nasc ? '<span class="tipo t-nasc">Nascosta</span> ' : '') + immobili + '<small class="proc">' + r.procedura.titolo + ' – ' + r.procedura.tribunale + '</small></h2>' +        '<div class="info">' +
+        '<h2>' + vivBadge(idc) + (elim ? '<span class="tipo t-elim">Eliminata</span> ' : nasc ? '<span class="tipo t-nasc">Nascosta</span> ' : '') + immobili + '<small class="proc">' + r.procedura.titolo + ' – ' + r.procedura.tribunale + '</small></h2>' +        '<div class="info">' +
           (tv ? '<div class="chip visite' + (tvM && tvM < Date.now() ? ' scaduta' : '') + '"><small>Chiedi la visita entro</small><b>' + d(tv.data) + '</b>' + (tvM && tvM < Date.now() ? ' · scaduto' : tvM ? ' · ' + tra(tvM) : '') + (tv.stima ? '<br><small style="text-transform:none;letter-spacing:0">indicativo: verifica nell\'avviso</small>' : '') + '</div>' : '') +
           '<div class="chip"><small>Data asta</small><b>' + d(a.data) + (a.ora ? ' ore ' + a.ora : '') + '</b></div>' +
           '<div class="chip"><small>Lotti nella stessa asta</small><b>' + nIn + ' su ' + L.length + '</b>' + (nV ? ' · ' + nV + ' venduti' : '') + (nAltro ? ' · ' + nAltro + ' non in asta' : '') + '</div>' +
@@ -611,6 +676,7 @@
             : '<button type="button" class="mini chiaro" data-az="nascondi" data-k="' + esc(r.cartella) + '" title="Toglie l\'asta dall\'elenco; si rivede con «Mostra nascoste»">Nascondi</button>') +
             '<button type="button" class="mini rosso" data-az="elimina" data-k="' + esc(r.cartella) + '">Elimina</button>') +
         '<span class="freccia"><span class="ch">Vedi lotti</span><span class="ap">Chiudi</span></span></div></summary>');
+      h.push(vivNota(idc));
       h.push('<div class="scorri"><table><tr><th>Lotto</th><th>Immobile</th><th>Quota</th><th class="n">Stima</th><th class="n">Base d\'asta</th><th class="n">Offerta minima</th><th>Valutazione</th><th>Stato</th><th>Annuncio</th></tr>');
       L.forEach(function (l) {
         var st = statoOggi(r, l), v = l.valutazione;
@@ -636,6 +702,7 @@
       });
     });
     $('lista').innerHTML = h.join('') || '<div class="vuoto">Nessun immobile corrisponde ai filtri.</div>';
+    disegnaViv();
   }
 })();
 </script>
