@@ -89,6 +89,7 @@
   .soc button.post{background:#b85c00;margin-left:6px} .soc button.post.bozza{background:#6b7280} .soc button.post.prog{background:#1d4ed8} .soc button.post.fatto{background:#16794a}
   .tipo.t-post{background:#dcf3e6;color:#16794a}
   .tipo.t-viv{background:#fff1d6;color:#9a5b00} .tipo.t-nuovo{background:#1d6b3a;color:#fff} .tipo.t-att{background:var(--attbg);color:var(--att)}
+  h2.provtit{margin:26px 0 0;padding:8px 14px;background:var(--blu);color:#fff;border-radius:8px;font-size:18px} h2.provtit small{font-weight:400;opacity:.8;font-size:13px}
   .vivnota{background:var(--attbg);border-left:4px solid var(--att);padding:8px 16px;font-size:12.5px}
   .vivnota a{font-weight:600;margin-left:6px}
   #vivacizzabili{margin-top:34px}
@@ -471,7 +472,7 @@
       (v.segnala ? ' <a href="' + esc(v.segnala) + '" target="_blank" rel="noopener">Segnala il cliente ↗</a>' : '') + '</div>' : '';
   }
   function vivRiga(i, conStato) {
-    var stato = conStato ? (i.archivio ? '<span class="tipo t-post">Già in archivio</span>' : (i.inCoda ? '<span class="tipo t-att">In coda: scheda in preparazione</span>' : '')) : '';
+    var stato = (conStato || i.archivio) ? (i.archivio ? '<span class="tipo t-post">Già in archivio</span>' : (i.inCoda ? '<span class="tipo t-att">In coda: scheda in preparazione</span>' : '')) : '';
     return '<tr' + (i.nuovo ? ' class="nuovo"' : '') + '><td>' + (i.nuovo ? '<span class="tipo t-nuovo">Nuovo</span> ' : '') + '<b>' + esc(i.via) + '</b><br><small style="color:var(--grigio)">' + esc(i.comune) + ' · ' + esc(i.tipo) + '</small>' + (stato ? '<br>' + stato : '') + '</td>' +
       '<td class="n">' + AGL.euro(i.prezzo) + '</td><td class="n">' + AGL.data(i.data) + '</td><td>' + esc(i.tribunale) + '<br><small style="color:var(--grigio)">' + esc(String(i.lotto)) + '</small></td>' +
       '<td>' + (i.link ? '<a href="' + esc(i.link) + '" target="_blank" rel="noopener">Annuncio ↗</a><br>' : '') + (i.segnala ? '<a href="' + esc(i.segnala) + '" target="_blank" rel="noopener">Segnala ↗</a>' : '') + '</td></tr>';
@@ -633,8 +634,18 @@
     voci.forEach(function (v) { (perComune[v.comune] = perComune[v.comune] || []).push(v); });
     var ordineComuni = Object.keys(perComune).sort(function (a, b) { return a.localeCompare(b); });
 
-    var h = [];
+    function provDi(r) { return r.provincia || 'Catanzaro'; }
+    ordineComuni.sort(function (a, b) {
+      var pa = provDi(perComune[a][0].r), pb = provDi(perComune[b][0].r);
+      if (pa !== pb) return pa === 'Catanzaro' ? -1 : pb === 'Catanzaro' ? 1 : pa.localeCompare(pb);
+      return a.localeCompare(b);
+    });
+    var perProv = {};
+    ordineComuni.forEach(function (c) { var p = provDi(perComune[c][0].r); perProv[p] = (perProv[p] || 0) + perComune[c].reduce(function (t, v) { return t + v.lotti.length; }, 0); });
+    var h = [], ultimaProv = null;
     ordineComuni.forEach(function (comune) {
+      var pv = provDi(perComune[comune][0].r);
+      if (pv !== ultimaProv) { ultimaProv = pv; h.push('<h2 class="provtit">Provincia di ' + esc(pv) + ' <small>' + (perProv[pv] === 1 ? '1 immobile' : perProv[pv] + ' immobili') + '</small></h2>'); }
       var gruppo = perComune[comune], nl = gruppo.reduce(function (t, v) { return t + v.lotti.length; }, 0);
       h.push('<h3 class="comune">' + esc(comune) + ' <small>' + (nl === 1 ? '1 immobile' : nl + ' immobili') + '</small></h3>');
       gruppo.forEach(function (voce) {
