@@ -42,6 +42,14 @@
   #viv .arch{background:var(--okbg);color:var(--ok);font-size:10.5px;font-weight:700;border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:2px}
   #viv details{margin-bottom:10px} #viv details>summary{cursor:pointer;font-size:17px;font-weight:600;color:var(--blu);padding:8px 2px}
   #viv h3.comune{margin:10px 0 6px;font-size:15px}
+  /* vivacizzabili: stessa struttura dell'archivio, colore viola */
+  body.vviv header{background:#3b1d6e} body.vviv .tessera{border-top-color:#7c3aed} body.vviv .tessera b{color:#4c1d95} body.vviv .tessera.urgente{border-top-color:var(--rosso)} body.vviv .tessera.urgente b{color:var(--rosso)}
+  body.vviv h3.comune{color:#4c1d95;border-bottom-color:#7c3aed}
+  details.asta.viv,details.asta.viv.rosso,details.asta.viv.arancio,details.asta.viv.verde{border-left-color:#7c3aed} details.asta.viv .capo h2{color:#4c1d95}
+  details.asta.viv .freccia{color:#6d28d9} .tipo.t-prov{background:#ede7fb;color:#4c1d95}
+  .vdett{padding:12px 16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .vdett button{font:inherit;font-size:13px;font-weight:600;color:#fff;border:0;border-radius:6px;padding:8px 14px;cursor:pointer;background:#b85c00} .vdett button.post.bozza{background:#6b7280} .vdett button.post.prog{background:#1d4ed8} .vdett button.post.fatto{background:#16794a} .vdett button.loc{background:#4c1d95}
+  .vdett .nota{flex-basis:100%;font-size:12.5px;color:var(--grigio)}
   /* archivio */
   .tessere{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
   .tessera{background:#fff;border-radius:8px;padding:10px 14px;border-top:4px solid var(--blu2)}
@@ -212,6 +220,17 @@
       <textarea id="vivTesto" rows="6" placeholder="Incolla qui il testo della mail…"></textarea>
       <div><button type="button" id="vivCarica">Carica l'elenco</button> <span id="vivMsg"></span></div>
     </details>
+    <details class="agg"><summary>ℹ️ Le vivacizzazioni come funzionano?</summary>
+      <p>Danno una fee aggiuntiva rispetto alla provvigione di consulenza, a prescindere dall'esito dell'asta.</p>
+      <ol><li><b>Segnala il cliente</b>: comunica il nominativo di chi partecipa all'asta, il prima possibile, anche prima della partecipazione.</li><li><b>Rispetta i tempi</b>: la segnalazione entro 3 giorni lavorativi dallo svolgimento dell'asta.</li><li><b>Sii il primo</b>: la fee spetta a chi segnala per primo un nominativo che partecipa.</li><li><b>Incassa la fee</b>: spetta sia con aggiudicazione sia senza.</li></ol>
+    </details>
+    <div class="tessere" id="vTessere"></div>
+    <div class="filtri">
+      <input id="vCerca" type="search" placeholder="Cerca via, comune, tipo, tribunale…">
+      <select id="vProv"><option value="">Tutte le province</option></select>
+      <select id="vComune"><option value="">Tutti i comuni</option></select>
+      <select id="vOrdine"><option value="data">Ordina per data asta</option><option value="prezzo">Ordina per offerta minima</option><option value="nome">Ordina per nome</option></select>
+    </div>
     <div id="vivLista"></div>
   </div>
   <div id="attesa" class="attesa">Caricamento…</div>
@@ -304,35 +323,74 @@
   function inArchivio(x) {
     return (window.ARCHIVIO || []).some(function (r) { return (r.lotti || []).some(function (l) { return l.offertaMinima && Math.abs(l.offertaMinima - x.offerta) <= 1; }); });
   }
-  function righeViv(L) {
-    return '<table><tr><th>Immobile</th><th>Comune</th><th class="n">Offerta minima</th><th>Data asta</th><th>Tribunale · lotto</th></tr>' + L.map(function (x) {
-      return '<tr><td><b>' + esc(x.via) + '</b><br><small style="color:var(--grigio)">' + esc(x.tipo) + '</small>' + (x.nuovo ? '<span class="nuovo">NUOVO</span>' : '') + (inArchivio(x) ? '<span class="arch" title="C\'è già un resoconto nell\'archivio aste">In archivio</span>' : '') + '</td>' +
-        '<td>' + esc(x.comune) + '</td><td class="n"><b>' + eur(x.offerta) + '</b></td><td>' + fmtData(x) + '</td><td>' + esc(x.tribunale) + ' · ' + esc(x.lotto) + '</td></tr>';
-    }).join('') + '</table>';
+  var TITOLO = function (t) { t = String(t || ''); return t === t.toUpperCase() ? t.toLowerCase().replace(/(^|[\s'.])([a-zà-ÿ])/g, function (_, p, c) { return p + c.toUpperCase(); }) : t; };
+  function descrViv(x) {
+    var via = TITOLO(x.via), luogo = /^(via|viale|vico|corso|piazza|contrada|c\.da|loc|località|strada|s\.s|sp|largo|traversa)\b/i.test(via) ? via : 'località ' + via;
+    return x.tipo + ' in ' + luogo + ', ' + x.comune;
   }
+  function momentoViv(x) { var t = new Date(x.data + 'T' + (x.ora || '23:59') + ':00').getTime(); return isNaN(t) ? 0 : t; }
   function disegnaViv() {
     var V = AREA.vivacizzabili, box = $('vivLista'); if (!box) return;
-    if (!V || !V.lista || !V.lista.length) { box.innerHTML = '<div class="vuoto">Nessun elenco di immobili vivacizzabili caricato.</div>'; return; }
-    var oggi = new Date().toISOString().slice(0, 10), L = V.lista.filter(function (x) { return x.data >= oggi; }), passate = V.lista.length - L.length;
-    L.sort(function (a, b) { return a.data < b.data ? -1 : a.data > b.data ? 1 : 0; });
-    var cz = L.filter(function (x) { return x.prov === 'Catanzaro'; }), altre = L.filter(function (x) { return x.prov !== 'Catanzaro'; }), prov = {};
-    altre.forEach(function (x) { (prov[x.prov] = prov[x.prov] || {})[x.comune] = (prov[x.prov][x.comune] || []).concat([x]); });
-    var h = '<div class="spieg"><b class="t">Le vivacizzazioni come funzionano?</b> Danno una fee aggiuntiva rispetto alla provvigione di consulenza, a prescindere dall\'esito dell\'asta.<ol>' +
-      '<li><b>Segnala il cliente</b>: comunica il nominativo di chi partecipa all\'asta, il prima possibile, anche prima della partecipazione.</li>' +
-      '<li><b>Rispetta i tempi</b>: la segnalazione entro 3 giorni lavorativi dallo svolgimento dell\'asta.</li>' +
-      '<li><b>Sii il primo</b>: la fee spetta a chi segnala per primo un nominativo che partecipa.</li>' +
-      '<li><b>Incassa la fee</b>: spetta sia con aggiudicazione sia senza.</li></ol></div>' +
-      '<p style="color:var(--grigio);font-size:13px;margin:0 0 4px">Riepilogo AGL del ' + esc(fmtData({ data: V.aggiornata })) + ' · ' + V.lista.length + ' immobili' + (passate ? ' (' + passate + ' con asta già passata, non mostrati)' : '') + '</p>' +
-      '<h2>Catanzaro <small>' + cz.length + ' immobili · zona del tuo ufficio</small></h2>' + (cz.length ? righeViv(cz) : '<div class="vuoto">Nessun immobile.</div>') +
-      '<h2>Altre province <small>' + altre.length + ' immobili</small></h2>';
-    Object.keys(prov).sort().forEach(function (p) {
-      var n = 0; Object.keys(prov[p]).forEach(function (c) { n += prov[p][c].length; });
-      h += '<details><summary>' + esc(p) + ' <small style="font-weight:400;color:var(--grigio)">' + n + ' immobili</small></summary>' + Object.keys(prov[p]).sort().map(function (c) {
-        return '<h3 class="comune">' + esc(c) + '</h3>' + righeViv(prov[p][c]); }).join('') + '</details>';
+    if (!V || !V.lista || !V.lista.length) { $('vTessere').innerHTML = ''; box.innerHTML = '<div class="vuoto">Nessun elenco di immobili vivacizzabili caricato: incolla qui sopra la mail AGL.</div>'; return; }
+    var oggi = new Date().toISOString().slice(0, 10), tutti = V.lista.filter(function (x) { return x.data >= oggi; }), passate = V.lista.length - tutti.length;
+    // opzioni dei filtri (si conserva la scelta)
+    var provs = {}, coms = {}; tutti.forEach(function (x) { provs[x.prov] = 1; coms[x.comune] = 1; });
+    function opz(sel, vals, tutte) { var v = sel.value; sel.innerHTML = '<option value="">' + tutte + '</option>' + vals.sort().map(function (c) { return '<option>' + esc(c) + '</option>'; }).join(''); sel.value = v; }
+    opz($('vProv'), Object.keys(provs), 'Tutte le province'); opz($('vComune'), Object.keys(coms), 'Tutti i comuni');
+    var q = $('vCerca').value.toLowerCase().trim(), fp = $('vProv').value, fc = $('vComune').value, ord = $('vOrdine').value;
+    var L = tutti.filter(function (x) {
+      if (fp && x.prov !== fp) return false; if (fc && x.comune !== fc) return false;
+      return !q || [x.via, x.comune, x.tipo, x.tribunale, x.prov, x.lotto].join(' ').toLowerCase().indexOf(q) > -1;
     });
-    box.innerHTML = h;
+    L.sort(function (a, b) { return ord === 'prezzo' ? a.offerta - b.offerta : ord === 'nome' ? TITOLO(a.via).localeCompare(TITOLO(b.via)) : momentoViv(a) - momentoViv(b); });
+    // tessere
+    var cz = tutti.filter(function (x) { return x.prov === 'Catanzaro'; }).length, nuovi = tutti.filter(function (x) { return x.nuovo; }).length, entro15 = tutti.filter(function (x) { return (momentoViv(x) - Date.now()) / 86400000 <= 15; }).length;
+    var pr = tutti.slice().sort(function (a, b) { return momentoViv(a) - momentoViv(b); })[0];
+    $('vTessere').innerHTML =
+      '<div class="tessera"><small>Vivacizzabili</small><b>' + tutti.length + '</b><span>' + cz + ' in provincia di Catanzaro</span></div>' +
+      '<div class="tessera' + (pr && (momentoViv(pr) - Date.now()) / 86400000 <= 7 ? ' urgente' : '') + '"><small>Prossima asta</small><b>' + (pr ? fmtData({ data: pr.data }) : '—') + '</b><span>' + (pr ? tra(momentoViv(pr)) + ' · ' + esc(TITOLO(pr.via)) + ', ' + esc(pr.comune) : '') + '</span></div>' +
+      '<div class="tessera"><small>Entro 15 giorni</small><b>' + entro15 + '</b><span>aste in arrivo</span></div>' +
+      '<div class="tessera"><small>Nuovi</small><b>' + nuovi + '</b><span>dall\'ultima mail' + (passate ? ' · ' + passate + ' aste passate non mostrate' : '') + '</span></div>';
+    var aperte = {}; [].forEach.call(document.querySelectorAll('#viv details.asta[open]'), function (x) { aperte[x.getAttribute('data-k')] = 1; });
+    // raggruppo per comune: prima quelli della provincia di Catanzaro
+    var per = {}; L.forEach(function (x) { (per[x.comune] = per[x.comune] || []).push(x); });
+    var ordC = Object.keys(per).sort(function (a, b) { var ca = per[a][0].prov === 'Catanzaro' ? 0 : 1, cb = per[b][0].prov === 'Catanzaro' ? 0 : 1; return ca - cb || a.localeCompare(b); });
+    var h = ordC.map(function (c) {
+      var G = per[c];
+      return '<h3 class="comune">' + esc(c) + ' <small>' + (G.length === 1 ? '1 immobile' : G.length + ' immobili') + ' · ' + esc(G[0].prov) + '</small></h3>' + G.map(function (x) {
+        var k = chiaveViv(x), m = momentoViv(x), g = (m - Date.now()) / 86400000, col = g <= 7 ? 'rosso' : g <= 15 ? 'arancio' : 'verde', ps = POST['viv|' + k];
+        var et = !ps ? ['', '📣 Pubblica post'] : ps.stato === 'pubblicato' ? ['fatto', '✓ Post pubblicato'] : ps.stato === 'approvato' ? ['prog', '🕒 Post programmato'] : ['bozza', '📝 Post in bozza: apri'];
+        return '<details class="asta viv ' + col + '" data-k="' + esc(k) + '"' + (aperte[k] ? ' open' : '') + '><summary class="capo">' +
+          '<div class="scad ' + col + '"><small>Data asta</small><b>' + fmtData({ data: x.data }) + '</b><span>' + (x.ora ? 'ore ' + x.ora + ' · ' : '') + tra(m) + '</span></div>' +
+          '<div class="om"><small>Offerta minima</small><b>' + eur(x.offerta) + '</b><span></span></div>' +
+          '<h2><span class="imm"><b>' + esc(TITOLO(x.via)) + '</b> <span class="tipo t-prov">' + esc(x.tipo) + '</span>' + (x.nuovo ? '<span class="nuovo">NUOVO</span>' : '') + (inArchivio(x) ? '<span class="arch" title="C\'è già un resoconto nell\'archivio aste">In archivio</span>' : '') +
+          (ps && ps.stato === 'pubblicato' ? ' <span class="tipo t-post">Post pubblicato</span>' : '') + '<small>' + esc(x.comune) + ' · ' + esc(x.tribunale) + ' · ' + esc(x.lotto) + '</small></span></h2>' +
+          '<div class="info"><div class="chip"><small>Provincia</small><b>' + esc(x.prov) + '</b></div><div class="chip"><small>Tribunale</small><b>' + esc(x.tribunale.replace('Tribunale di ', '')) + '</b></div></div>' +
+          '<span class="freccia"><span class="ch">Vedi dettagli</span><span class="ap">Chiudi</span></span></summary>' +
+          '<div class="vdett"><button type="button" class="post ' + et[0] + '" data-vk="' + esc(k) + '">' + et[1] + '</button><button type="button" class="loc" data-vk="' + esc(k) + '" data-loc="1" title="Apre il modello locandina già compilato, pronto da scaricare in PDF e stampare">🖨 Stampa locandina</button>' +
+          '<div class="nota">Si apre Studio Social con comune, prezzo, data d\'asta e una descrizione di partenza già scritti. Foto, risparmio, superficie e piano (se servono) li aggiungi lì.</div></div></details>';
+      }).join('');
+    }).join('');
+    box.innerHTML = h || '<div class="vuoto">Nessun immobile con questi filtri.</div>';
   }
-
+  // apre Studio Social e gli passa i dati dell'immobile vivacizzabile
+  function postViv(b) {
+    if (!CH) return;
+    var k = b.getAttribute('data-vk'), loc = !!b.getAttribute('data-loc');
+    var x = ((AREA.vivacizzabili && AREA.vivacizzabili.lista) || []).filter(function (y) { return chiaveViv(y) === k; })[0]; if (!x) return;
+    var w = window.open(STUDIO + '/#area=' + CH + '&compila', '_blank');
+    if (!w) { alert('Il browser ha bloccato la nuova finestra: consenti i popup per questa pagina e riprova.'); return; }
+    var valori = { comune: x.comune, prezzo: String(Math.round(x.offerta)), descrizione: descrViv(x) };
+    if (loc) { var m = String(x.data).match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) valori.data_asta = m[3] + '/' + m[2] + '/' + m[1]; }
+    var dati = { tipo: 'compila-immobile', locandina: loc, chiave: 'viv|' + k, foto: null, valori: valori };
+    function ricevi(ev) {
+      if (ev.origin !== STUDIO || ev.source !== w || !ev.data || ev.data.tipo !== 'studio-pronto') return;
+      window.removeEventListener('message', ricevi); w.postMessage(dati, STUDIO);
+    }
+    window.addEventListener('message', ricevi);
+  }
+  document.getElementById('viv').addEventListener('click', function (ev) { var b = ev.target.closest && ev.target.closest('button[data-vk]'); if (b) { ev.preventDefault(); postViv(b); } });
+  ['vCerca', 'vProv', 'vComune', 'vOrdine'].forEach(function (i) { $(i).addEventListener('input', disegnaViv); });
   // legge il testo della mail AGL (incollato) e ne ricava l'elenco degli immobili
   function leggiMailViv(testo) {
     var t = String(testo || '').replace(/ /g, ' ').replace(/<https?:[^>]*>/g, '').replace(/\r/g, '');
