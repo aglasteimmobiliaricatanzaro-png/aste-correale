@@ -28,6 +28,18 @@
   #accesso button{width:100%;font:inherit;font-weight:600;font-size:15px;background:var(--blu);color:#fff;border:0;border-radius:8px;padding:11px;cursor:pointer}
   #accesso button:disabled{opacity:.6}
   #errore{color:var(--rosso);font-size:13px;min-height:18px;margin-top:8px}
+  /* vivacizzabili */
+  #viv{display:none} body.vviv #viv{display:block} body.vviv #archivio{display:none!important}
+  #viv .spieg{background:#fff;border-left:6px solid var(--att);border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:14px}
+  #viv .spieg ol{margin:6px 0 0 18px;padding:0} #viv .spieg b.t{color:var(--blu)}
+  #viv h2{color:var(--blu);font-size:20px;margin:18px 0 8px} #viv h2 small{font-weight:400;color:var(--grigio);font-size:13px}
+  #viv table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:8px}
+  #viv th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--grigio);padding:8px 10px;background:#f4f6f9}
+  #viv td{padding:8px 10px;border-top:1px solid var(--riga);font-size:14px;vertical-align:top} #viv td.n,#viv th.n{text-align:right;white-space:nowrap}
+  #viv .nuovo{background:#d92d20;color:#fff;font-size:10.5px;font-weight:700;border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+  #viv .arch{background:var(--okbg);color:var(--ok);font-size:10.5px;font-weight:700;border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+  #viv details{margin-bottom:10px} #viv details>summary{cursor:pointer;font-size:17px;font-weight:600;color:var(--blu);padding:8px 2px}
+  #viv h3.comune{margin:10px 0 6px;font-size:15px}
   /* archivio */
   .tessere{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
   .tessera{background:#fff;border-radius:8px;padding:10px 14px;border-top:4px solid var(--blu2)}
@@ -143,7 +155,8 @@
 </div>
 <!-- Sezioni dell'area riservata: per aggiungerne una, aggiungere un link qui -->
 <nav id="menu" hidden><div class="dentro">
-  <a class="attiva" href="#">Archivio aste</a>
+  <a class="attiva" href="#" data-vista="archivio">Archivio aste</a>
+  <a href="#vivacizzabili" data-vista="viv">Vivacizzabili</a>
   <a id="vaiStudio" href="https://studio-social.agl-correale.workers.dev" target="_blank" rel="noopener">Studio Social ↗</a>
 </div></nav></header>
 <main>
@@ -191,6 +204,7 @@
     </div>
     <div id="lista"></div>
   </div>
+  <div id="viv"></div>
   <div id="attesa" class="attesa">Caricamento…</div>
 </main>
 <script>
@@ -270,10 +284,54 @@
     fetch(STUDIO + '/api/area/dati', { headers: { 'x-chiave-area': CH }, cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (a) {
       if (!a) return;
       var cambiato = JSON.stringify(a) !== JSON.stringify(AREA);
-      AREA = a; areaOk = true;
+      AREA = a; areaOk = true; disegnaViv();
       if (cambiato && !$('archivio').hidden) { disegnaCoda(); disegna(); }
     }).catch(function () {});
   }
+
+  // ---------- vivacizzabili: riepilogo mensile AGL (dati sul server, caricati dal PC con area.ps1 -Viv) ----------
+  function fmtData(x) { var m = String(x.data || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] + (x.ora ? ' ore ' + x.ora : '') : ''; }
+  function eur(n) { return Number(n).toLocaleString('it-IT') + ' €'; }
+  function inArchivio(x) {
+    return (window.ARCHIVIO || []).some(function (r) { return (r.lotti || []).some(function (l) { return l.offertaMinima && Math.abs(l.offertaMinima - x.offerta) <= 1; }); });
+  }
+  function righeViv(L) {
+    return '<table><tr><th>Immobile</th><th>Comune</th><th class="n">Offerta minima</th><th>Data asta</th><th>Tribunale · lotto</th></tr>' + L.map(function (x) {
+      return '<tr><td><b>' + esc(x.via) + '</b><br><small style="color:var(--grigio)">' + esc(x.tipo) + '</small>' + (x.nuovo ? '<span class="nuovo">NUOVO</span>' : '') + (inArchivio(x) ? '<span class="arch" title="C\'è già un resoconto nell\'archivio aste">In archivio</span>' : '') + '</td>' +
+        '<td>' + esc(x.comune) + '</td><td class="n"><b>' + eur(x.offerta) + '</b></td><td>' + fmtData(x) + '</td><td>' + esc(x.tribunale) + ' · ' + esc(x.lotto) + '</td></tr>';
+    }).join('') + '</table>';
+  }
+  function disegnaViv() {
+    var V = AREA.vivacizzabili, box = $('viv'); if (!box) return;
+    if (!V || !V.lista || !V.lista.length) { box.innerHTML = '<div class="vuoto">Nessun elenco di immobili vivacizzabili caricato.</div>'; return; }
+    var oggi = new Date().toISOString().slice(0, 10), L = V.lista.filter(function (x) { return x.data >= oggi; }), passate = V.lista.length - L.length;
+    L.sort(function (a, b) { return a.data < b.data ? -1 : a.data > b.data ? 1 : 0; });
+    var cz = L.filter(function (x) { return x.prov === 'Catanzaro'; }), altre = L.filter(function (x) { return x.prov !== 'Catanzaro'; }), prov = {};
+    altre.forEach(function (x) { (prov[x.prov] = prov[x.prov] || {})[x.comune] = (prov[x.prov][x.comune] || []).concat([x]); });
+    var h = '<div class="spieg"><b class="t">Le vivacizzazioni come funzionano?</b> Danno una fee aggiuntiva rispetto alla provvigione di consulenza, a prescindere dall\'esito dell\'asta.<ol>' +
+      '<li><b>Segnala il cliente</b>: comunica il nominativo di chi partecipa all\'asta, il prima possibile, anche prima della partecipazione.</li>' +
+      '<li><b>Rispetta i tempi</b>: la segnalazione entro 3 giorni lavorativi dallo svolgimento dell\'asta.</li>' +
+      '<li><b>Sii il primo</b>: la fee spetta a chi segnala per primo un nominativo che partecipa.</li>' +
+      '<li><b>Incassa la fee</b>: spetta sia con aggiudicazione sia senza.</li></ol></div>' +
+      '<p style="color:var(--grigio);font-size:13px;margin:0 0 4px">Riepilogo AGL del ' + esc(fmtData({ data: V.aggiornata })) + ' · ' + V.lista.length + ' immobili' + (passate ? ' (' + passate + ' con asta già passata, non mostrati)' : '') + '</p>' +
+      '<h2>Catanzaro <small>' + cz.length + ' immobili · zona del tuo ufficio</small></h2>' + (cz.length ? righeViv(cz) : '<div class="vuoto">Nessun immobile.</div>') +
+      '<h2>Altre province <small>' + altre.length + ' immobili</small></h2>';
+    Object.keys(prov).sort().forEach(function (p) {
+      var n = 0; Object.keys(prov[p]).forEach(function (c) { n += prov[p][c].length; });
+      h += '<details><summary>' + esc(p) + ' <small style="font-weight:400;color:var(--grigio)">' + n + ' immobili</small></summary>' + Object.keys(prov[p]).sort().map(function (c) {
+        return '<h3 class="comune">' + esc(c) + '</h3>' + righeViv(prov[p][c]); }).join('') + '</details>';
+    });
+    box.innerHTML = h;
+  }
+  document.getElementById('menu').addEventListener('click', function (ev) {
+    var a = ev.target.closest && ev.target.closest('a[data-vista]'); if (!a) return;
+    ev.preventDefault();
+    var v = a.getAttribute('data-vista') === 'viv';
+    document.body.classList.toggle('vviv', v);
+    [].forEach.call(document.querySelectorAll('#menu a[data-vista]'), function (x) { x.classList.toggle('attiva', x === a); });
+    if (v) disegnaViv();
+    window.scrollTo(0, 0);
+  });
   window.addEventListener('focus', caricaArea);
   setInterval(function () { if (!document.hidden) caricaArea(); }, 60000);
   function opArea(corpo) {
