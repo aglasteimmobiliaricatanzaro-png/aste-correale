@@ -32,6 +32,8 @@
   #viv{display:none} body.vviv #viv{display:block} body.vviv #archivio{display:none!important}
   #viv .spieg{background:#fff;border-left:6px solid var(--att);border-radius:8px;padding:12px 16px;margin-bottom:14px;font-size:14px}
   #viv .spieg ol{margin:6px 0 0 18px;padding:0} #viv .spieg b.t{color:var(--blu)}
+  #viv details.agg{background:#fff;border-radius:8px;padding:10px 16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.08)} #viv details.agg>summary{font-size:15px}
+  #viv details.agg textarea{width:100%;font:inherit;font-size:13px;border:1px solid var(--riga);border-radius:6px;padding:8px;margin:6px 0} #viv details.agg button{font:inherit;font-weight:600;background:var(--blu);color:#fff;border:0;border-radius:6px;padding:8px 14px;cursor:pointer} #vivMsg{font-size:13px;margin-left:8px}
   #viv h2{color:var(--blu);font-size:20px;margin:18px 0 8px} #viv h2 small{font-weight:400;color:var(--grigio);font-size:13px}
   #viv table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:8px}
   #viv th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--grigio);padding:8px 10px;background:#f4f6f9}
@@ -204,7 +206,14 @@
     </div>
     <div id="lista"></div>
   </div>
-  <div id="viv"></div>
+  <div id="viv">
+    <details class="agg"><summary>📥 Aggiorna l'elenco con la nuova mail AGL</summary>
+      <p>Apri la mail «Riepilogo mensile immobili vivacizzabili», seleziona tutto il testo, copialo e incollalo qui sotto. L'elenco viene sostituito e i nuovi immobili compaiono con l'etichetta NUOVO.</p>
+      <textarea id="vivTesto" rows="6" placeholder="Incolla qui il testo della mail…"></textarea>
+      <div><button type="button" id="vivCarica">Carica l'elenco</button> <span id="vivMsg"></span></div>
+    </details>
+    <div id="vivLista"></div>
+  </div>
   <div id="attesa" class="attesa">Caricamento…</div>
 </main>
 <script>
@@ -302,7 +311,7 @@
     }).join('') + '</table>';
   }
   function disegnaViv() {
-    var V = AREA.vivacizzabili, box = $('viv'); if (!box) return;
+    var V = AREA.vivacizzabili, box = $('vivLista'); if (!box) return;
     if (!V || !V.lista || !V.lista.length) { box.innerHTML = '<div class="vuoto">Nessun elenco di immobili vivacizzabili caricato.</div>'; return; }
     var oggi = new Date().toISOString().slice(0, 10), L = V.lista.filter(function (x) { return x.data >= oggi; }), passate = V.lista.length - L.length;
     L.sort(function (a, b) { return a.data < b.data ? -1 : a.data > b.data ? 1 : 0; });
@@ -323,6 +332,29 @@
     });
     box.innerHTML = h;
   }
+
+  // legge il testo della mail AGL (incollato) e ne ricava l'elenco degli immobili
+  function leggiMailViv(testo) {
+    var t = String(testo || '').replace(/ /g, ' ').replace(/<https?:[^>]*>/g, '').replace(/\r/g, '');
+    var re = /^[ \t]*([^\n·]+?)[ \t]*·[ \t]*([^\n·]+?)[ \t]*\n[ \t]*([^\n]+?)[ \t]*\n[ \t]*([^\n]+?)[ \t]*\n[ \t]*OFFERTA MINIMA[ \t]*\n?[ \t]*([\d.]+)[ \t]*€[\s\S]*?(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}))?(?::\d{2})?[^\n]*?Tribunale di ([^·\n]+?)[ \t]*·[ \t]*#[ \t]*([^\n]+)/gm, L = [], m;
+    var cap = function (s) { return s.toLowerCase().replace(/(^|[\s'])([a-zà-ÿ])/g, function (_, a, b) { return a + b.toUpperCase(); }); };
+    while ((m = re.exec(t))) L.push({ prov: m[1].trim(), tipo: m[2].trim().charAt(0).toUpperCase() + m[2].trim().slice(1).toLowerCase(), via: m[3].trim(), comune: m[4].trim(), offerta: parseInt(m[5].replace(/\./g, ''), 10), data: m[6], ora: m[7] || '', tribunale: 'Tribunale di ' + cap(m[8].trim()), lotto: m[9].trim() });
+    return L;
+  }
+  function chiaveViv(x) { return [x.prov, x.comune, x.via, x.lotto, x.offerta, x.data].join('|').toLowerCase(); }
+  $('vivCarica').addEventListener('click', function () {
+    var msg = $('vivMsg'), L = leggiMailViv($('vivTesto').value);
+    if (!L.length) { msg.style.color = 'var(--rosso)'; msg.textContent = 'Non trovo immobili nel testo: copia tutta la mail, dall\'inizio alla fine.'; return; }
+    var prima = (AREA.vivacizzabili && AREA.vivacizzabili.lista) || [], noti = {}, uguale = prima.length === L.length;
+    prima.forEach(function (x) { noti[chiaveViv(x)] = x; });
+    L.forEach(function (x) { if (!noti[chiaveViv(x)]) uguale = false; });
+    L.forEach(function (x) { var p = noti[chiaveViv(x)]; if (uguale ? (p && p.nuovo) : (prima.length && !p)) x.nuovo = true; });
+    var oggi = new Date().toISOString().slice(0, 10), nuovi = L.filter(function (x) { return x.nuovo; }).length;
+    msg.style.color = 'var(--grigio)'; msg.textContent = 'Invio…';
+    opArea({ op: 'viv=', viv: { aggiornata: oggi, fonte: 'Riepilogo mensile immobili vivacizzabili (AGL), incollato dal sito il ' + oggi, lista: L } }).then(function () {
+      disegnaViv(); $('vivTesto').value = ''; msg.style.color = 'var(--ok)'; msg.textContent = 'Fatto: ' + L.length + ' immobili' + (prima.length ? ', ' + nuovi + ' nuovi' : '') + '.';
+    }).catch(function (e) { msg.style.color = 'var(--rosso)'; msg.textContent = e.message; });
+  });
   document.getElementById('menu').addEventListener('click', function (ev) {
     var a = ev.target.closest && ev.target.closest('a[data-vista]'); if (!a) return;
     ev.preventDefault();
