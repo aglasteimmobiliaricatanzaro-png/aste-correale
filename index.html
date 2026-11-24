@@ -49,6 +49,8 @@
   details.asta.viv .freccia{color:#6d28d9} .tipo.t-prov{background:#ede7fb;color:#4c1d95}
   .vdett{padding:12px 16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   .vdett button{font:inherit;font-size:13px;font-weight:600;color:#fff;border:0;border-radius:6px;padding:8px 14px;cursor:pointer;background:#b85c00} .vdett button.post.bozza{background:#6b7280} .vdett button.post.prog{background:#1d4ed8} .vdett button.post.fatto{background:#16794a} .vdett button.loc{background:#4c1d95}
+  .vdett .lnk{font-size:13px;font-weight:600;color:#6d28d9;border:1px solid #c4b5fd;background:#f5f3ff;border-radius:6px;padding:7px 12px;text-decoration:none;cursor:pointer} .vdett .lnk:hover{background:#ede9fe}
+  .vdett img.vth{height:44px;width:auto;border-radius:5px;border:1px solid var(--bordo,#d0d5dd);object-fit:cover}
   .vdett .nota{flex-basis:100%;font-size:12.5px;color:var(--grigio)}
   /* archivio */
   .tessere{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
@@ -320,10 +322,32 @@
   // ---------- vivacizzabili: riepilogo mensile AGL (dati sul server, caricati dal PC con area.ps1 -Viv) ----------
   function fmtData(x) { var m = String(x.data || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] + (x.ora ? ' ore ' + x.ora : '') : ''; }
   function eur(n) { return Number(n).toLocaleString('it-IT') + ' €'; }
+  // lotto dell'archivio che corrisponde all'immobile vivacizzabile (stessa offerta minima, meglio se stesso comune)
+  function archivioLotto(x) {
+    var trovati = [];
+    (window.ARCHIVIO || []).forEach(function (r) { (r.lotti || []).forEach(function (l) { if (l.offertaMinima && Math.abs(l.offertaMinima - x.offerta) <= 1) trovati.push({ r: r, l: l }); }); });
+    var buoni = trovati.filter(function (t) { return nomeComune(t.l).toLowerCase() === String(x.comune).toLowerCase(); });
+    return (buoni[0] || trovati[0]) || null;
+  }
   function inArchivio(x) {
     return (window.ARCHIVIO || []).some(function (r) { return (r.lotti || []).some(function (l) { return l.offertaMinima && Math.abs(l.offertaMinima - x.offerta) <= 1; }); });
   }
   var TITOLO = function (t) { t = String(t || ''); return t === t.toUpperCase() ? t.toLowerCase().replace(/(^|[\s'.])([a-zà-ÿ])/g, function (_, p, c) { return p + c.toUpperCase(); }) : t; };
+  // dati dal database AGL "Vivacizzazioni e NPL" (Calabria, 24/11/2026): link scheda PVP, annuncio Immobiliare.it, superficie
+  var EXTRA = {"san giovanni in fiore|19003":{"pvp":"4660388","pub":"134775365","mq":"75.1"},"catanzaro|45240":{"pvp":"4659160","pub":"134713425","mq":"115"},"reggio calabria|84375":{"pvp":"4658110","pub":"134627003","mq":"1105"},"ardore|39437":{"pub":"134587165","mq":"154"},"cosenza|36338":{"pvp":"4649270","pub":"134566015","mq":"106"},"san ferdinando|20592":{"pvp":"4641057","pub":"133099010","mq":"29078"},"lamezia terme|39566":{"pub":"134372227","mq":"136.7"},"catanzaro|50625":{"pvp":"4647554","pub":"134371673","mq":"160.72"},"lamezia terme|84375":{"pvp":"4654419","pub":"134368281","mq":"350"},"cittanova|24751":{"pvp":"4649610","pub":"133915207","mq":"297"},"castrolibero|24527":{"pvp":"4645772","pub":"133913893","mq":"631.2"},"cittanova|85676":{"pvp":"4647374","pub":"133692264","mq":"175"},"reggio calabria|26873":{"pvp":"4634168","pub":"133589234","mq":"84"},"scalea|22774":{"pub":"133530712","mq":"41"},"montalto uffugo|26988":{"pvp":"4612521","pub":"133530346","mq":"284"},"cosenza|78992":{"pvp":"4635885","pub":"133499846","mq":"96"},"castrolibero|100095":{"pvp":"4636710","pub":"133496028","mq":"201"},"sinopoli|25056":{"pvp":"4637512","pub":"133240134","mq":"144.6"},"mendicino|30576":{"pvp":"4635147","pub":"133235286","mq":"94"},"gioia tauro|27252":{"pvp":"4637202","pub":"133235110","mq":"157"},"catanzaro|275250":{"pvp":"4637821","pub":"134659045","mq":"200"},"catanzaro|98880":{"pvp":"4637806","pub":"133138520","mq":"149"},"casole bruzio|50070":{"pvp":"4633669","pub":"134658841","mq":"346"},"casole bruzio|80812":{"pvp":"4633650","pub":"134658777","mq":"680"},"scalea|41214":{"pvp":"4636807","pub":"132919462","mq":"212.91"},"sant'andrea apostolo dello ionio|32400":{"pvp":"4631832","pub":"132624392","mq":"57"},"soverato|26496":{"pvp":"4631829","pub":"132624362","mq":"96"},"mendicino|33320":{"pvp":"4626542","pub":"132258254","mq":"249.95"},"cosenza|120531":{"pvp":"4618691","pub":"132258196","mq":"367.8"},"montalto uffugo|21798":{"pvp":"4622537","pub":"132000878","mq":"110"},"montalto uffugo|25722":{"pvp":"4622532","pub":"132000870","mq":"1980"},"rende|38597":{"pvp":"4610726","pub":"131287622","mq":"305"},"spezzano della sila|14948":{"mq":"84"},"cimina'|14906":{"mq":"167"},"cimina'|30375":{"mq":"92"},"fagnano castello|13722":{"mq":"96"},"cimina'|29250":{"mq":"208"},"marano marchesato|20272":{"mq":"100"},"marano marchesato|54508":{"mq":"185"}};
+  function extraViv(x) { return EXTRA[(x.comune + '|' + x.offerta).toLowerCase()] || {}; }
+  // foto caricate a mano per gli immobili vivacizzabili: restano in questo browser (IndexedDB)
+  var VDB = null;
+  function vdb() { return VDB || (VDB = new Promise(function (res, rej) { var q = indexedDB.open('aste-viv-foto', 1); q.onupgradeneeded = function () { q.result.createObjectStore('f'); }; q.onsuccess = function () { res(q.result); }; q.onerror = function () { rej(q.error); }; })); }
+  function fotoGet(k) { return vdb().then(function (db) { return new Promise(function (res) { var r = db.transaction('f').objectStore('f').get(k); r.onsuccess = function () { res(r.result || null); }; r.onerror = function () { res(null); }; }); }).catch(function () { return null; }); }
+  function fotoSet(k, b) { return vdb().then(function (db) { return new Promise(function (res, rej) { var t = db.transaction('f', 'readwrite'); t.objectStore('f').put(b, k); t.oncomplete = res; t.onerror = function () { rej(t.error); }; }); }); }
+  function fotoRidotta(file) {
+    return new Promise(function (res, rej) {
+      var u = URL.createObjectURL(file), im = new Image();
+      im.onload = function () { var m = Math.min(1, 1600 / Math.max(im.naturalWidth, im.naturalHeight)), c = document.createElement('canvas'); c.width = Math.round(im.naturalWidth * m); c.height = Math.round(im.naturalHeight * m); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(u); c.toBlob(function (b) { b ? res(b) : rej(new Error('Foto non leggibile')); }, 'image/jpeg', 0.88); };
+      im.onerror = function () { URL.revokeObjectURL(u); rej(new Error('Foto non leggibile')); }; im.src = u;
+    });
+  }
   function descrViv(x) {
     var via = TITOLO(x.via), luogo = /^(via|viale|vico|corso|piazza|contrada|c\.da|loc|località|strada|s\.s|sp|largo|traversa)\b/i.test(via) ? via : 'località ' + via;
     return x.tipo + ' in ' + luogo + ', ' + x.comune;
@@ -358,26 +382,34 @@
     var h = ordC.map(function (c) {
       var G = per[c];
       return '<h3 class="comune">' + esc(c) + ' <small>' + (G.length === 1 ? '1 immobile' : G.length + ' immobili') + ' · ' + esc(G[0].prov) + '</small></h3>' + G.map(function (x) {
-        var k = chiaveViv(x), m = momentoViv(x), g = (m - Date.now()) / 86400000, col = g <= 7 ? 'rosso' : g <= 15 ? 'arancio' : 'verde', ps = POST['viv|' + k];
+        var ex = extraViv(x), k = chiaveViv(x), m = momentoViv(x), g = (m - Date.now()) / 86400000, col = g <= 7 ? 'rosso' : g <= 15 ? 'arancio' : 'verde', al = archivioLotto(x), ps = POST['viv|' + k] || (al && POST[al.r.cartella + '|' + al.l.numero]);
         var et = !ps ? ['', '📣 Pubblica post'] : ps.stato === 'pubblicato' ? ['fatto', '✓ Post pubblicato'] : ps.stato === 'approvato' ? ['prog', '🕒 Post programmato'] : ['bozza', '📝 Post in bozza: apri'];
         return '<details class="asta viv ' + col + '" data-k="' + esc(k) + '"' + (aperte[k] ? ' open' : '') + '><summary class="capo">' +
           '<div class="scad ' + col + '"><small>Data asta</small><b>' + fmtData({ data: x.data }) + '</b><span>' + (x.ora ? 'ore ' + x.ora + ' · ' : '') + tra(m) + '</span></div>' +
           '<div class="om"><small>Offerta minima</small><b>' + eur(x.offerta) + '</b><span></span></div>' +
           '<h2><span class="imm"><b>' + esc(TITOLO(x.via)) + '</b> <span class="tipo t-prov">' + esc(x.tipo) + '</span>' + (x.nuovo ? '<span class="nuovo">NUOVO</span>' : '') + (inArchivio(x) ? '<span class="arch" title="C\'è già un resoconto nell\'archivio aste">In archivio</span>' : '') +
           (ps && ps.stato === 'pubblicato' ? ' <span class="tipo t-post">Post pubblicato</span>' : '') + '<small>' + esc(x.comune) + ' · ' + esc(x.tribunale) + ' · ' + esc(x.lotto) + '</small></span></h2>' +
-          '<div class="info"><div class="chip"><small>Provincia</small><b>' + esc(x.prov) + '</b></div><div class="chip"><small>Tribunale</small><b>' + esc(x.tribunale.replace('Tribunale di ', '')) + '</b></div></div>' +
+          '<div class="info"><div class="chip"><small>Provincia</small><b>' + esc(x.prov) + '</b></div><div class="chip"><small>Tribunale</small><b>' + esc(x.tribunale.replace('Tribunale di ', '')) + '</b></div>' + (ex.mq ? '<div class="chip"><small>Superficie</small><b>' + Math.round(parseFloat(ex.mq)).toLocaleString('it-IT') + ' mq</b></div>' : '') + '</div>' +
           '<span class="freccia"><span class="ch">Vedi dettagli</span><span class="ap">Chiudi</span></span></summary>' +
           '<div class="vdett"><button type="button" class="post ' + et[0] + '" data-vk="' + esc(k) + '">' + et[1] + '</button><button type="button" class="loc" data-vk="' + esc(k) + '" data-loc="1" title="Apre il modello locandina già compilato, pronto da scaricare in PDF e stampare">🖨 Stampa locandina</button>' +
-          '<div class="nota">Si apre Studio Social con comune, prezzo, data d\'asta e una descrizione di partenza già scritti. Foto, risparmio, superficie e piano (se servono) li aggiungi lì.</div></div></details>';
+          (ex.pvp ? '<a class="lnk" href="https://pvp.giustizia.it/pvp/it/detail_annuncio.page?idAnnuncio=' + ex.pvp + '" target="_blank" rel="noopener" title="Scheda ufficiale sul Portale Vendite Pubbliche: avviso, ordinanza e perizia da scaricare">Scheda PVP ↗</a>' : '') +
+          (ex.pub ? '<a class="lnk" href="https://www.immobiliare.it/annunci/' + ex.pub + '/" target="_blank" rel="noopener" title="Annuncio AGL su Immobiliare.it: da qui scarichi le foto">📷 Foto su Immobiliare.it ↗</a>' : '') +
+          (al ? '' : '<label class="lnk ffoto" title="Carica la foto per post e locandina: resta salvata su questo browser">📷 <span data-vtxt="' + esc(k) + '">Carica foto</span><input type="file" accept="image/*" data-vf="' + esc(k) + '" hidden></label><img class="vth" data-vth="' + esc(k) + '" alt="" hidden>') +
+          '<div class="nota">' + (al ? 'Questo immobile è già nell\'archivio: foto, risparmio, descrizione, superficie e piano arrivano dal suo resoconto.' : 'Si apre Studio Social con comune, prezzo, data d\'asta e una descrizione di partenza già scritti. Per questo immobile non c\'è un resoconto con foto: scarica la foto dall\'annuncio Immobiliare.it e caricala qui (resta su questo browser), poi apri post o locandina.') + '</div></div></details>';
       }).join('');
     }).join('');
     box.innerHTML = h || '<div class="vuoto">Nessun immobile con questi filtri.</div>';
+    [].forEach.call(box.querySelectorAll('img[data-vth]'), function (im) {
+      fotoGet(im.getAttribute('data-vth')).then(function (b) { if (!b) return; im.src = URL.createObjectURL(b); im.hidden = false; var t = box.querySelector('span[data-vtxt="' + im.getAttribute('data-vth').replace(/"/g, '\\"') + '"]'); if (t) t.textContent = 'Cambia foto'; });
+    });
   }
   // apre Studio Social e gli passa i dati dell'immobile vivacizzabile
   function postViv(b) {
     if (!CH) return;
     var k = b.getAttribute('data-vk'), loc = !!b.getAttribute('data-loc');
     var x = ((AREA.vivacizzabili && AREA.vivacizzabili.lista) || []).filter(function (y) { return chiaveViv(y) === k; })[0]; if (!x) return;
+    var al = archivioLotto(x); // se c'è già il resoconto si usano i suoi dati e la sua foto, come da "Pubblica post" dell'archivio
+    if (al) { pubblicaPost({ getAttribute: function (n) { return n === 'data-c' ? al.r.cartella : String(al.l.numero); } }, loc); return; }
     var w = window.open(STUDIO + '/#area=' + CH + '&compila', '_blank');
     if (!w) { alert('Il browser ha bloccato la nuova finestra: consenti i popup per questa pagina e riprova.'); return; }
     var valori = { comune: x.comune, prezzo: String(Math.round(x.offerta)), descrizione: descrViv(x) };
@@ -385,11 +417,16 @@
     var dati = { tipo: 'compila-immobile', locandina: loc, chiave: 'viv|' + k, foto: null, valori: valori };
     function ricevi(ev) {
       if (ev.origin !== STUDIO || ev.source !== w || !ev.data || ev.data.tipo !== 'studio-pronto') return;
-      window.removeEventListener('message', ricevi); w.postMessage(dati, STUDIO);
+      window.removeEventListener('message', ricevi); fotoGet(k).then(function (b) { dati.foto = b; w.postMessage(dati, STUDIO); });
     }
     window.addEventListener('message', ricevi);
   }
   document.getElementById('viv').addEventListener('click', function (ev) { var b = ev.target.closest && ev.target.closest('button[data-vk]'); if (b) { ev.preventDefault(); postViv(b); } });
+  document.getElementById('viv').addEventListener('change', function (ev) {
+    var i = ev.target; if (!i.getAttribute || !i.getAttribute('data-vf') || !i.files || !i.files[0]) return;
+    var k = i.getAttribute('data-vf');
+    fotoRidotta(i.files[0]).then(function (b) { return fotoSet(k, b); }).then(disegnaViv).catch(function (e) { alert('Foto non salvata: ' + e.message); });
+  });
   ['vCerca', 'vProv', 'vComune', 'vOrdine'].forEach(function (i) { $(i).addEventListener('input', disegnaViv); });
   // legge il testo della mail AGL (incollato) e ne ricava l'elenco degli immobili
   function leggiMailViv(testo) {
